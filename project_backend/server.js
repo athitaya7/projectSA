@@ -20,7 +20,7 @@ db.connect(err => {
   console.log('✅ Connected to MySQL');
 });
 
-// ✅ ดึงข้อมูลทั้งหมดจากตาราง employees
+// ดึงข้อมูลทั้งหมด
 app.get('/employees', (req, res) => {
   const sql = 'SELECT * FROM employees';
   db.query(sql, (err, results) => {
@@ -29,43 +29,47 @@ app.get('/employees', (req, res) => {
   });
 });
 
-// ✅ เพิ่มข้อมูลใหม่
-app.post('/employees', (req, res) => {
-  const { name, position, salary } = req.body;
-  const sql = 'INSERT INTO employees (name, position, salary) VALUES (?, ?, ?)';
-  db.query(sql, [name, position, salary], (err, result) => {
-    if (err) return res.status(500).json({ error: err.message });
-    res.json({ message: '✅ Employee added!', id: result.insertId });
-  });
-});
-
-// ✅ ดึงข้อมูลตาม id
-app.get('/employees/:id', (req, res) => {
-  const { id } = req.params;
-  const sql = 'SELECT * FROM employees WHERE id = ?';
-  db.query(sql, [id], (err, results) => {
+// ดึงข้อมูลตาม employee_code
+app.get('/employees/:employee_code', (req, res) => {
+  const { employee_code } = req.params;
+  const sql = 'SELECT * FROM employees WHERE employee_code = ?';
+  db.query(sql, [employee_code], (err, results) => {
     if (err) return res.status(500).json({ error: err.message });
     if (results.length === 0) return res.status(404).json({ message: 'Not found' });
     res.json(results[0]);
   });
 });
 
+// เพิ่มพนักงานใหม่
+app.post('/employees', (req, res) => {
+  const { employee_code, user_id, first_name, last_name, position, department, hire_date } = req.body;
+  const sql = `INSERT INTO employees 
+    (employee_code, user_id, first_name, last_name, position, department, hire_date)
+    VALUES (?, ?, ?, ?, ?, ?, ?)`;
+  db.query(sql, [employee_code, user_id, first_name, last_name, position, department, hire_date], (err, result) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json({ message: '✅ Employee added!', employee_code });
+  });
+});
+
 // ✅ อัปเดตข้อมูลพนักงาน
-app.put('/employees/:id', (req, res) => {
-  const { id } = req.params;
-  const { name, position, salary } = req.body;
-  const sql = 'UPDATE employees SET name=?, position=?, salary=? WHERE id=?';
-  db.query(sql, [name, position, salary, id], (err) => {
+app.put('/employees/:employee_code', (req, res) => {
+  const { employee_code } = req.params;
+  const { first_name, last_name, position, department } = req.body;
+  const sql = `UPDATE employees 
+               SET first_name=?, last_name=?, position=?, department=? 
+               WHERE employee_code=?`;
+  db.query(sql, [first_name, last_name, position, department, employee_code], (err) => {
     if (err) return res.status(500).json({ error: err.message });
     res.json({ message: '✅ Employee updated!' });
   });
 });
 
 // ✅ ลบข้อมูลพนักงาน
-app.delete('/employees/:id', (req, res) => {
-  const { id } = req.params;
-  const sql = 'DELETE FROM employees WHERE id=?';
-  db.query(sql, [id], (err) => {
+app.delete('/employees/:employee_code', (req, res) => {
+  const { employee_code } = req.params;
+  const sql = 'DELETE FROM employees WHERE employee_code=?';
+  db.query(sql, [employee_code], (err) => {
     if (err) return res.status(500).json({ error: err.message });
     res.json({ message: '🗑️ Employee deleted!' });
   });
