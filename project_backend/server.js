@@ -6,10 +6,9 @@ app.use(express.json());
 
 const db = mysql.createConnection({
   host: '127.0.0.1',   // ชื่อ host ของ MySQL
-  user: 'root',        // ชื่อผู้ใช้
-  password: '',    // รหัสผ่าน
-  database: 'dba_project', // ชื่อฐานข้อมูล
-  port: 3306
+  user: 'project_user',        // ชื่อผู้ใช้
+  password: 'yourpassword',    // รหัสผ่าน
+  database: 'hrms', // ชื่อฐานข้อมูล 
 });
 
 // ตรวจสอบการเชื่อมต่อ
