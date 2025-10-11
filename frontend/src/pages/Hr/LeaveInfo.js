@@ -4,8 +4,6 @@ import {
   FaUmbrellaBeach,
   FaTemperatureHigh,
   FaUserTie,
-  FaEdit,
-  FaTrash,
 } from "react-icons/fa";
 
 function LeaveInfoHR() {
@@ -36,12 +34,6 @@ function LeaveInfoHR() {
         leave.id === id ? { ...leave, status: newStatus } : leave
       )
     );
-  };
-
-  const deleteLeave = (id) => {
-    if (window.confirm("คุณต้องการลบข้อมูลการลานี้หรือไม่?")) {
-      setLeaveData(leaveData.filter((leave) => leave.id !== id));
-    }
   };
 
   return (
@@ -136,7 +128,7 @@ function LeaveInfoHR() {
                       </span>
                     </td>
                     <td className="text-center">
-                      {/* ✅ ปุ่มเรียบๆ สไตล์ HR */}
+                      {/* ✅ เหลือแค่ปุ่มอนุมัติ/ไม่อนุมัติ */}
                       <button
                         className="btn btn-outline-success btn-sm me-2 rounded-pill"
                         onClick={() => updateStatus(leave.id, "อนุมัติแล้ว")}
@@ -144,19 +136,10 @@ function LeaveInfoHR() {
                         อนุมัติ
                       </button>
                       <button
-                        className="btn btn-outline-danger btn-sm me-2 rounded-pill"
+                        className="btn btn-outline-danger btn-sm rounded-pill"
                         onClick={() => updateStatus(leave.id, "ไม่อนุมัติ")}
                       >
                         ไม่อนุมัติ
-                      </button>
-                      <button className="btn btn-outline-primary btn-sm me-2 rounded-pill">
-                        <FaEdit /> แก้ไข
-                      </button>
-                      <button
-                        className="btn btn-outline-secondary btn-sm rounded-pill"
-                        onClick={() => deleteLeave(leave.id)}
-                      >
-                        <FaTrash /> ลบ
                       </button>
                     </td>
                   </tr>

@@ -10,6 +10,7 @@ import Evaluation from "./pages/Hr/Evaluation.js";
 import FinancialInfo from "./pages/Hr/FinancialInfo.js";
 import HistoryHR from "./pages/Hr/HistoryHR.js";
 import LeaveInfo from "./pages/Hr/LeaveInfo.js";
+import PersonalInfo from './pages/Hr/PersonalInfo.js';
 import Training from "./pages/Hr/Training.js";
 import HRLayout from './layouts/HRLayout.jsx';
 import "./pages/Hr/Dashboard.css";
@@ -77,6 +78,11 @@ export default function App() {
         <ProtectedRoute role="2" element={<HRLayout><LeaveInfo /></HRLayout>} />
       }/>
 
+      {/* HR PersonalInfo */}
+      <Route path="/dashboard/hr/personal-info" element={
+      <ProtectedRoute role="2" element={<HRLayout><PersonalInfo /></HRLayout>} />
+      }/>
+
       {/* HR Training */}
       <Route path="/dashboard/hr/training" element={
         <ProtectedRoute role="2" element={<HRLayout><Training /></HRLayout>} />
@@ -89,7 +95,7 @@ export default function App() {
 
       {/* Employee Pages */}
       <Route path="/profile" element={
-        <ProtectedRoute role="1" element={<EmployeeLayout>  <ProfilePage /> </EmployeeLayout>} />
+        <ProtectedRoute role="1" element={<EmployeeLayout>  <ProfilePage /></EmployeeLayout>} />
       } />
       <Route path="/leave" element={
         <ProtectedRoute role="1" element={<EmployeeLayout><LeavePage /></EmployeeLayout>} />

@@ -6,7 +6,7 @@ import {
   FaChartLine, FaGraduationCap, FaFolder, FaUsers 
 } from "react-icons/fa";
 import { BarChart2, User, Umbrella, Star, BookOpen, FileText, LogOut } from 'lucide-react';
-import './Sidebar.css'; // CSS รวม HR + Employee
+import './Sidebar.css'; // ตรวจสอบว่าคุณได้สร้างไฟล์ CSS นี้แล้ว
 
 const Sidebar = ({ role, currentPage, setCurrentPage }) => {
   const navigate = useNavigate();
@@ -29,7 +29,7 @@ const Sidebar = ({ role, currentPage, setCurrentPage }) => {
   const employeeMenuRef = useRef(null);
 
   // ===== HR Sidebar =====
-  if (role === "2") {
+   if (role === "2") {
     return (
       <div className="sidebar hr">
         <div className="sidebar-header">
@@ -37,19 +37,23 @@ const Sidebar = ({ role, currentPage, setCurrentPage }) => {
         </div>
 
         {/* Dashboard */}
-        <div className={`menu-item ${currentPage === "dashboard" ? "active" : ""}`} onClick={() => handleNavigate("dashboard","/dashboard/hr")}>
+        <div className={`menu-item ${currentPage === "dashboard" ? "active" : ""}`} 
+             onClick={() => handleNavigate("dashboard","/dashboard/hr")}>
           <FaHome className="menu-icon" /> <span className="menu-label">Dashboard</span>
         </div>
 
-        {/* ข้อมูลประจำตัว */}
+        {/* ข้อมูลประจำตัว (HR) */}
         <div className="menu-item" onClick={() => toggleMenu("personal")}>
           <div className="d-flex justify-content-between align-items-center">
             <div><FaUser className="menu-icon" /> ข้อมูลประจำตัว</div>
             {openMenu === "personal" ? <FaChevronDown /> : <FaChevronRight />}
           </div>
         </div>
-        <div className="submenu" ref={personalMenuRef} style={{maxHeight: openMenu === "personal" ? `
-          ${personalMenuRef.current?.scrollHeight}px` : '0px',overflow: 'hidden',transition: 'max-height 0.3s ease'}}>
+        <div className="submenu" ref={personalMenuRef} 
+             style={{maxHeight: openMenu === "personal" ? `${personalMenuRef.current?.scrollHeight}px` : '0px', overflow: 'hidden', transition: 'max-height 0.3s ease'}}>
+          <div onClick={() => handleNavigate("personal_info","/dashboard/hr/personal-info")} className="submenu-item">
+            <FaUser className="menu-icon" /> ข้อมูลส่วนตัว
+          </div>
           <div onClick={() => handleNavigate("history","/dashboard/hr/history")} className="submenu-item">
             <FaFileAlt className="menu-icon" /> ประวัติ
           </div>
@@ -74,19 +78,24 @@ const Sidebar = ({ role, currentPage, setCurrentPage }) => {
             {openMenu === "employee" ? <FaChevronDown /> : <FaChevronRight />}
           </div>
         </div>
-        <div className="submenu" ref={employeeMenuRef} style={{maxHeight: openMenu === "employee" ? `
-          ${employeeMenuRef.current?.scrollHeight}px` : '0px',overflow: 'hidden',transition: 'max-height 0.3s ease'}}>
-          <div onClick={() => handleNavigate("employees","/dashboard/hr/employees")} className="submenu-item"> 
-            <FaUser className="menu-icon" /> ข้อมูลพนักงาน</div>
-          <div onClick={() => handleNavigate("financial","/dashboard/hr/financial")} className="submenu-item">
-            <FaFileAlt className="menu-icon" /> ข้อมูลทางการเงิน</div>
+        <div className="submenu" ref={employeeMenuRef} 
+             style={{maxHeight: openMenu === "employee" ? `${employeeMenuRef.current?.scrollHeight}px` : '0px', overflow: 'hidden', transition: 'max-height 0.3s ease'}}>
+          <div onClick={() => handleNavigate("employee_personal", "/dashboard/hr/personal-info")} className="submenu-item">
+            <FaUser className="menu-icon" /> ข้อมูลประจำตัวพนักงาน
+          </div>
+          <div onClick={() => handleNavigate("employees", "/dashboard/hr/employees")} className="submenu-item">
+            <FaUsers className="menu-icon" /> ข้อมูลการทำงาน
+          </div>
+          <div onClick={() => handleNavigate("financial", "/dashboard/hr/financial")} className="submenu-item">
+            <FaFileAlt className="menu-icon" /> ข้อมูลทางการเงิน
+          </div>
         </div>
 
         {/* Logout */}
-          <button className="logout-btn" onClick={handleLogout}>
+        <button className="logout-btn" onClick={handleLogout}>
           <span className="menu-icon"><LogOut size={20} /></span>
           <span className="menu-label">Logout</span>
-      </button>
+        </button>
       </div>
     );
   }

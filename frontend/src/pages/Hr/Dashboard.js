@@ -7,10 +7,32 @@ import {
   FaChartLine,
   FaChalkboardTeacher,
 } from "react-icons/fa";
-import { BiBarChartAlt2 } from "react-icons/bi"; // ไอคอนแท่งกราฟ 3 แท่ง
+import { BiBarChartAlt2 } from "react-icons/bi";
+import {
+  Chart as ChartJS,
+  ArcElement,
+  BarElement,
+  LineElement,
+  CategoryScale,
+  LinearScale,
+  Tooltip,
+  Legend,
+  PointElement,
+} from "chart.js";
+import { Pie, Bar, Line } from "react-chartjs-2";
+
+ChartJS.register(
+  ArcElement,
+  BarElement,
+  LineElement,
+  PointElement,
+  CategoryScale,
+  LinearScale,
+  Tooltip,
+  Legend
+);
 
 function Dashboard() {
-  // 🔹 ข้อมูลจำลองจากชีท HR
   const data = {
     totalEmployees: 120,
     newEmployees: 6,
@@ -20,27 +42,99 @@ function Dashboard() {
     avgEvaluation: 85,
   };
 
+  // 🔹 กราฟวงกลม: สัดส่วนเพศ
+  const genderData = {
+    labels: ["ชาย", "หญิง", "อื่น ๆ"],
+    datasets: [
+      {
+        data: [60, 50, 10],
+        backgroundColor: ["#36A2EB", "#FF6384", "#FFCE56"],
+        borderWidth: 0,
+      },
+    ],
+  };
+
+  // 🔹 กราฟแท่ง: เงินเดือนเฉลี่ยตามตำแหน่ง
+  const salaryData = {
+    labels: ["HR", "บัญชี", "IT", "ฝ่ายผลิต", "ขาย"],
+    datasets: [
+      {
+        label: "เงินเดือนเฉลี่ย (บาท)",
+        data: [25000, 28000, 35000, 22000, 30000],
+        backgroundColor: "#5B86E5",
+      },
+    ],
+  };
+
+  // 🔹 กราฟแท่งแนวนอน: จำนวนพนักงานในแต่ละแผนก
+  const deptData = {
+    labels: ["HR", "บัญชี", "IT", "ฝ่ายผลิต", "ขาย"],
+    datasets: [
+      {
+        label: "จำนวนพนักงาน",
+        data: [10, 15, 25, 30, 20],
+        backgroundColor: "#43E97B",
+      },
+    ],
+  };
+
+  // 🔹 กราฟเส้น: จำนวนพนักงานที่ลาออกแต่ละปี
+  const resignedByYear = {
+    labels: ["2020", "2021", "2022", "2023", "2024"],
+    datasets: [
+      {
+        label: "จำนวนพนักงานที่ลาออก",
+        data: [5, 8, 6, 10, 7],
+        borderColor: "#FF6384",
+        backgroundColor: "rgba(255,99,132,0.3)",
+        tension: 0.3,
+        fill: true,
+        pointBackgroundColor: "#FF6384",
+      },
+    ],
+  };
+
+  // 🔹 กราฟแท่ง: เงินเดือนเฉลี่ยต่อปี
+  const avgSalaryYear = {
+    labels: ["2020", "2021", "2022", "2023", "2024"],
+    datasets: [
+      {
+        label: "เงินเดือนเฉลี่ย (บาท)",
+        data: [25000, 26500, 28000, 29500, 31000],
+        backgroundColor: "rgba(91,134,229,0.8)",
+      },
+    ],
+  };
+
+  // 🔹 Options สำหรับกราฟ
+  const barOptions = {
+    responsive: true,
+    plugins: {
+      legend: { display: false },
+    },
+    scales: {
+      x: { grid: { display: false } },
+      y: { grid: { display: false }, ticks: { stepSize: 5 } },
+    },
+  };
+
+  const horizontalBarOptions = { ...barOptions, indexAxis: "y" };
+
   return (
     <div className="container mt-4" style={{ fontFamily: "'Kanit', sans-serif" }}>
-      <h1>HR Dashboard</h1>
-      <p>ยินดีต้อนรับเข้าสู่ระบบ HR</p>
-      {/* 🔹 หัวข้อ Dashboard */}
+      {/* ---------- หัวข้อ Dashboard ---------- */}
       <div className="d-flex align-items-center mb-3">
         <BiBarChartAlt2
           size={18}
-          style={{
-            color: "#0b1e39",
-            marginRight: "6px",
-            marginTop: "-2px",
-          }}
+          style={{ color: "#0b1e39", marginRight: "6px", marginTop: "-2px" }}
         />
         <h4 className="fw-bold mb-0" style={{ color: "#0b1e39" }}>
-          Dashboard
+          HR Dashboard
         </h4>
       </div>
 
-      {/* 🔹 การ์ดสรุปข้อมูล */}
-      <div className="row g-4">
+      {/* ---------- การ์ด KPI ---------- */}
+      <div className="row g-4 mb-4">
         {[
           {
             title: "พนักงานทั้งหมด",
@@ -81,12 +175,7 @@ function Dashboard() {
         ].map((card, index) => (
           <div className="col-md-4" key={index}>
             <div className="card shadow-sm border-0 p-3 text-center dashboard-card">
-              <div
-                className="icon-box mb-3"
-                style={{
-                  background: card.color,
-                }}
-              >
+              <div className="icon-box mb-3" style={{ background: card.color }}>
                 {card.icon}
               </div>
               <h6 className="text-secondary">{card.title}</h6>
@@ -96,7 +185,48 @@ function Dashboard() {
         ))}
       </div>
 
-      {/* 🔹 CSS */}
+      {/* ---------- กราฟส่วนล่าง ---------- */}
+      <div className="row g-4 mb-5">
+        <div className="col-md-4">
+          <div className="card shadow-sm border-0 p-3 rounded-4">
+            <h6 className="fw-bold mb-3 text-center">สัดส่วนเพศพนักงาน</h6>
+            <Pie data={genderData} />
+          </div>
+        </div>
+
+        <div className="col-md-4">
+          <div className="card shadow-sm border-0 p-3 rounded-4">
+            <h6 className="fw-bold mb-3 text-center">เงินเดือนเฉลี่ยตามตำแหน่ง</h6>
+            <Bar data={salaryData} options={barOptions} />
+          </div>
+        </div>
+
+        <div className="col-md-4">
+          <div className="card shadow-sm border-0 p-3 rounded-4">
+            <h6 className="fw-bold mb-3 text-center">จำนวนพนักงานในแต่ละแผนก</h6>
+            <Bar data={deptData} options={horizontalBarOptions} />
+          </div>
+        </div>
+      </div>
+
+      {/* ---------- กราฟวิเคราะห์เพิ่มเติม ---------- */}
+      <div className="row g-4 mb-5">
+        <div className="col-md-6">
+          <div className="card shadow-sm border-0 p-3 rounded-4">
+            <h6 className="fw-bold mb-3 text-center">พนักงานที่ลาออกแต่ละปี</h6>
+            <Line data={resignedByYear} />
+          </div>
+        </div>
+
+        <div className="col-md-6">
+          <div className="card shadow-sm border-0 p-3 rounded-4">
+            <h6 className="fw-bold mb-3 text-center">เงินเดือนเฉลี่ยต่อปี</h6>
+            <Bar data={avgSalaryYear} options={barOptions} />
+          </div>
+        </div>
+      </div>
+
+      {/* ---------- CSS ---------- */}
       <style>
         {`
           .dashboard-card {

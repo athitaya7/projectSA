@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { FaFileAlt, FaPlus, FaTrash, FaEdit, FaDownload } from "react-icons/fa";
+import { FaFileAlt, FaPlus, FaDownload, FaLockOpen } from "react-icons/fa";
 
 function DocumentHR() {
   const [documents, setDocuments] = useState([
@@ -10,6 +10,7 @@ function DocumentHR() {
       fileType: "PDF",
       uploadDate: "2025-01-01",
       fileUrl: "#",
+      status: "พร้อมให้เข้าถึง",
     },
     {
       id: 2,
@@ -18,6 +19,7 @@ function DocumentHR() {
       fileType: "PDF",
       uploadDate: "2025-02-10",
       fileUrl: "#",
+      status: "พร้อมให้เข้าถึง",
     },
     {
       id: 3,
@@ -26,6 +28,7 @@ function DocumentHR() {
       fileType: "DOCX",
       uploadDate: "2025-03-15",
       fileUrl: "#",
+      status: "พร้อมให้เข้าถึง",
     },
   ]);
 
@@ -44,7 +47,10 @@ function DocumentHR() {
       return;
     }
 
-    setDocuments([...documents, { ...newDoc, id: documents.length + 1 }]);
+    setDocuments([
+      ...documents,
+      { ...newDoc, id: documents.length + 1, status: "พร้อมให้เข้าถึง" },
+    ]);
     setNewDoc({
       title: "",
       category: "",
@@ -54,10 +60,15 @@ function DocumentHR() {
     });
   };
 
-  // ✅ ลบเอกสาร
-  const handleDelete = (id) => {
-    if (window.confirm("คุณต้องการลบเอกสารนี้หรือไม่?")) {
-      setDocuments(documents.filter((doc) => doc.id !== id));
+  // ✅ ขอสิทธิ์เข้าถึงเอกสาร
+  const handleRequestAccess = (id) => {
+    if (window.confirm("คุณต้องการขอสิทธิ์เข้าถึงเอกสารนี้หรือไม่?")) {
+      setDocuments(
+        documents.map((doc) =>
+          doc.id === id ? { ...doc, status: "รอการอนุมัติสิทธิ์" } : doc
+        )
+      );
+      alert("ส่งคำขอเข้าถึงเอกสารเรียบร้อยแล้ว ✅");
     }
   };
 
@@ -70,14 +81,14 @@ function DocumentHR() {
       <div className="d-flex align-items-center mb-4">
         <FaFileAlt className="text-primary me-2" size={20} />
         <h4 className="fw-bold mb-0" style={{ color: "#0b1e39" }}>
-          จัดการเอกสารของบริษัท (สำหรับ HR)
+          ขอสิทธิ์เข้าถึงเอกสารของบริษัท
         </h4>
       </div>
 
-      {/* 🔹 ฟอร์มเพิ่มเอกสาร */}
+      {/* 🔹 ฟอร์มเพิ่มเอกสาร (เฉพาะ HR) */}
       <div className="card shadow-sm border-0 rounded-4 mb-4">
         <div className="p-3 fw-bold text-dark border-bottom bg-light">
-          เพิ่มเอกสารใหม่
+          เพิ่มเอกสารใหม่ (เฉพาะ HR)
         </div>
         <div className="p-4 row">
           <div className="col-md-4 mb-3">
@@ -148,6 +159,7 @@ function DocumentHR() {
                 <th>หมวดหมู่</th>
                 <th>ประเภทไฟล์</th>
                 <th>วันที่อัปโหลด</th>
+                <th>สถานะ</th>
                 <th>การจัดการ</th>
               </tr>
             </thead>
@@ -160,27 +172,44 @@ function DocumentHR() {
                     <td>{doc.fileType}</td>
                     <td>{doc.uploadDate}</td>
                     <td>
+                      <span
+                        className={`badge ${
+                          doc.status === "รอการอนุมัติสิทธิ์"
+                            ? "bg-warning text-dark"
+                            : "bg-success"
+                        }`}
+                      >
+                        {doc.status}
+                      </span>
+                    </td>
+                    <td>
+                      {doc.status === "รอการอนุมัติสิทธิ์" ? (
+                        <button
+                          className="btn btn-secondary btn-sm rounded-pill"
+                          disabled
+                        >
+                          รอดำเนินการ
+                        </button>
+                      ) : (
+                        <button
+                          className="btn btn-outline-primary btn-sm rounded-pill"
+                          onClick={() => handleRequestAccess(doc.id)}
+                        >
+                          <FaLockOpen className="me-1" /> ขอสิทธิ์เข้าถึง
+                        </button>
+                      )}
                       <a
                         href={doc.fileUrl}
-                        className="btn btn-outline-secondary btn-sm me-2"
+                        className="btn btn-outline-secondary btn-sm ms-2 rounded-pill"
                       >
                         <FaDownload /> ดาวน์โหลด
                       </a>
-                      <button className="btn btn-outline-primary btn-sm me-2">
-                        <FaEdit /> แก้ไข
-                      </button>
-                      <button
-                        className="btn btn-outline-danger btn-sm"
-                        onClick={() => handleDelete(doc.id)}
-                      >
-                        <FaTrash /> ลบ
-                      </button>
                     </td>
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan="5" className="text-secondary py-4">
+                  <td colSpan="6" className="text-secondary py-4">
                     ไม่มีเอกสารในระบบ
                   </td>
                 </tr>
