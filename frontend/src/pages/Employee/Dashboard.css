@@ -60,3 +60,20 @@
   color: #131d39;
 }
 
+.dashboard-layout {
+  display: flex;
+  height: 100vh;
+  transition: all 0.3s ease;
+}
+
+.main-content {
+  flex: 1;
+  padding: 20px;
+  background-color: #f4f6f8;
+  transition: margin-left 0.3s ease;
+}
+
+/* สำหรับ sidebar ที่พับแล้วขยับเนื้อหา */
+.sidebar.collapsed ~ .main-content {
+  margin-left: 80px;
+}

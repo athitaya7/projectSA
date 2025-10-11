@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import PageHeader from '../../../../emp_bykim-main/my-app/src/components/PageHeader';
+import PageHeader from "../../../src/components/PageHeader";
 import { FileText, Eye, FileDown, User } from 'lucide-react';
 import './Documents.css';
 

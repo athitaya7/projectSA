@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import PageHeader from '../../../../emp_bykim-main/my-app/src/components/PageHeader';
+import PageHeader from "../../../src/components/PageHeader";
 import { BookOpen, FileDown } from 'lucide-react';
 import './Training.css';
 

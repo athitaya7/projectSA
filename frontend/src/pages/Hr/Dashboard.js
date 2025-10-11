@@ -1,4 +1,3 @@
-// src/pages/HRDashboard.jsx
 import React from "react";
 import {
   FaUsers,
@@ -8,10 +7,10 @@ import {
   FaChartLine,
   FaChalkboardTeacher,
 } from "react-icons/fa";
-import { BiBarChartAlt2 } from "react-icons/bi";
+import { BiBarChartAlt2 } from "react-icons/bi"; // ไอคอนแท่งกราฟ 3 แท่ง
 
-function HRDashboard() {
-  // ข้อมูลจำลอง
+function Dashboard() {
+  // 🔹 ข้อมูลจำลองจากชีท HR
   const data = {
     totalEmployees: 120,
     newEmployees: 6,
@@ -23,7 +22,9 @@ function HRDashboard() {
 
   return (
     <div className="container mt-4" style={{ fontFamily: "'Kanit', sans-serif" }}>
-      {/* หัวข้อ Dashboard */}
+      <h1>HR Dashboard</h1>
+      <p>ยินดีต้อนรับเข้าสู่ระบบ HR</p>
+      {/* 🔹 หัวข้อ Dashboard */}
       <div className="d-flex align-items-center mb-3">
         <BiBarChartAlt2
           size={18}
@@ -38,7 +39,7 @@ function HRDashboard() {
         </h4>
       </div>
 
-      {/* การ์ดสรุปข้อมูล */}
+      {/* 🔹 การ์ดสรุปข้อมูล */}
       <div className="row g-4">
         {[
           {
@@ -95,7 +96,7 @@ function HRDashboard() {
         ))}
       </div>
 
-      {/* CSS */}
+      {/* 🔹 CSS */}
       <style>
         {`
           .dashboard-card {
@@ -122,4 +123,4 @@ function HRDashboard() {
   );
 }
 
-export default HRDashboard;
+export default Dashboard;

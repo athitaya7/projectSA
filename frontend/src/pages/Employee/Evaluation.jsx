@@ -2,7 +2,7 @@
 // ไฟล์: src/pages/Evaluation.jsx
 // ============================================
 import { useState, useEffect } from 'react';
-import PageHeader from '../../../../emp_bykim-main/my-app/src/components/PageHeader';
+import PageHeader from "../../../src/components/PageHeader";
 import { Star } from 'lucide-react';
 import './Evaluation.css';
 

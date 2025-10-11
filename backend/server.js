@@ -21,15 +21,17 @@ const SECRET = "supersecretkey";
 
 // -------- Middleware ตรวจสอบ JWT ----------
 const authMiddleware = (roles=[]) => async (req,res,next)=>{
-  const token = req.headers["authorization"]?.split(" ")[1];
+   const token = req.headers["authorization"]?.split(" ")[1];
   if(!token) return res.status(401).json({message:"Token required"});
   try{
-    const decoded = jwt.verify(token, SECRET);
+    const decoded = jwt.verify(token, SECRET); // ✅ ใช้ SECRET เดียวกับตอนสร้าง token
     if(roles.length && !roles.includes(decoded.role))
       return res.status(403).json({message:"Forbidden"});
     req.user = decoded;
     next();
-  } catch(err){ res.status(401).json({message:"Invalid token"});}
+  } catch(err){
+    res.status(401).json({message:"Invalid token"});
+  }
 }
 
 // -------- Login ----------
@@ -50,8 +52,63 @@ app.post("/api/login", async (req, res) => {
   if (password !== user.password) 
     return res.status(400).json({ message: "Wrong password" });
 
-  const token = jwt.sign({ id: user.user_id, role: user.role_id }, SECRET, { expiresIn: "8h" });
+  let roleName = user.role_id === 1 ? "hr" : "employee";
+  const token = jwt.sign({ id: user.user_id, role: roleName }, SECRET, { expiresIn: "8h" });
   res.json({ token, role: user.role_id });
+});
+
+app.get("/api/profile", authMiddleware(["employee","hr"]), async (req, res) => {
+  try {
+    const token = req.headers.authorization?.split(" ")[1];
+    if (!token) return res.status(401).json({ error: "Unauthorized" });
+
+    // แปลง token เป็นข้อมูลจริง
+    const decoded = jwt.verify(token, SECRET); // SECRET ต้องเหมือนตอนสร้าง token
+    const userId = decoded.id; // id ของผู้ใช้จาก token
+
+    const conn = await mysql.createConnection(dbConfig);
+
+    // ดึงข้อมูลพนักงานตาม userId
+    const [personalRows] = await conn.execute(
+      "SELECT employee_id, first_name, last_name, birth_date, id_card, phone, address, email, position FROM employees WHERE employee_id = ?",
+      [userId]
+    );
+
+    const [workRows] = await conn.execute(
+      "SELECT position, department, hire_date, TIMESTAMPDIFF(YEAR, hire_date, CURDATE()) AS workAge FROM employees WHERE employee_id = ?",
+      [userId]
+    );
+
+    const [salaryRows] = await conn.execute(
+      "SELECT base_salary, allowance, bonus FROM payroll WHERE employee_code = ?",
+      [userId]
+    );
+
+    const [taxRows] = await conn.execute(
+      "SELECT social_security, provident_fund, income_tax, total_deduction, net_income FROM payroll WHERE employee_code = ?",
+      [userId]
+    );
+
+    const [benefitRows] = await conn.execute(
+      "SELECT benefit_name FROM benefits WHERE employee_code = ?",
+      [userId]
+    );
+
+    await conn.end();
+
+    const profileData = {
+      personalInfo: personalRows[0] || {},
+      workInfo: {},      // ดึงเหมือนเดิม
+      salaryInfo: {},    // ดึงเหมือนเดิม
+      taxInfo: {},       // ดึงเหมือนเดิม
+      benefits: []       // ดึงเหมือนเดิม
+    };
+
+    res.json(profileData);
+  } catch (err) {
+    console.error(err);
+    res.status(403).json({ error: "Invalid token" });
+  }
 });
 
 // -------- Employee API ----------

@@ -1,0 +1,150 @@
+/* ===== Base Sidebar ===== */
+.sidebar {
+  width: 250px;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  color: white;
+  font-family: sans-serif;
+  transition: width 0.3s ease;
+}
+
+/* Sidebar Header */
+.sidebar .sidebar-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 80px;
+  padding: 20px;
+  text-align: center;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.sidebar .sidebar-header h2 {
+  font-size: 20px;
+  font-weight: 600;
+}
+
+/* Sidebar Menu */
+.sidebar .sidebar-menu {
+  flex: 1; /* กินพื้นที่ที่เหลือ */
+  display: flex;
+  flex-direction: column;
+  padding: 20px 0;
+  overflow-y: auto;
+  gap: 8px;
+}
+
+/* Menu Items */
+.sidebar .menu-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 20px;
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.8);
+  cursor: pointer;
+  text-align: left;
+  font-size: 15px;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+}
+
+.sidebar .menu-item:hover,
+.sidebar .menu-item.active {
+  background-color: rgba(255, 255, 255, 0.15);
+  color: white;
+  font-weight: 500;
+  border-left: 4px solid #4CAF50;
+}
+
+.sidebar .menu-icon {
+  font-size: 20px;
+}
+
+.sidebar .menu-label {
+  font-weight: 500;
+}
+
+/* Logout Button */
+.sidebar .logout-btn {
+  margin-top: auto; /* push ลงข้างล่าง */
+  padding: 12px 20px;
+  background-color: #e74c3c;
+  border: none;
+  border-radius: 8px;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  cursor: pointer;
+  font-size: 15px;
+  font-weight: 500;
+  transition: background-color 0.3s ease;
+}
+
+.sidebar .logout-btn:hover {
+  background-color: #c0392b;
+}
+
+/* ===== HR Sidebar ===== */
+.sidebar.hr {
+  background-color: #0b1e39;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+/* HR Menu */
+.sidebar.hr .sidebar-menu {
+  flex: 1; /* กินพื้นที่ที่เหลือ */
+  display: flex;
+  flex-direction: column;
+  padding: 20px 0;
+  overflow-y: auto;
+  gap: 8px;
+}
+
+/* ===== Employee Sidebar ===== */
+.sidebar.employee {
+  background-color: #0b1e39;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+.sidebar .submenu {
+  overflow: hidden;
+  transition: max-height 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-left: 20px;
+}
+
+.sidebar .submenu-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 20px;
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.8);
+  cursor: pointer;
+  text-align: left;
+  font-size: 15px;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+}
+
+.sidebar .submenu-item:hover {
+  background-color: rgba(255, 255, 255, 0.15);
+  color: white;
+  font-weight: 500;
+  border-left: 4px solid #4CAF50;
+}

@@ -2,7 +2,7 @@
 // ไฟล์: src/pages/Profile.jsx
 // ============================================
 import { useState, useEffect } from 'react';
-import PageHeader from '../../../../emp_bykim-main/my-app/src/components/PageHeader';
+import PageHeader from "../../../src/components/PageHeader";
 import { User, Check } from 'lucide-react';
 import './Profile.css';
 
@@ -16,10 +16,23 @@ function Profile() {
   });
 
   useEffect(() => {
-    // TODO: Fetch data from backend
-    // fetch('/api/profile')
-    //   .then(res => res.json())
-    //   .then(data => setProfileData(data));
+    const token = localStorage.getItem("token");
+    console.log("Token used for profile fetch:", token); // ✅ แสดง token
+    
+    fetch("http://127.0.0.1:3000/api/profile", { 
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    })
+      .then(async (res) => {
+        if (!res.ok) {
+          const text = await res.text();
+          throw new Error(`HTTP ${res.status}: ${text}`);
+        }
+        return res.json();
+      })  
+      .then((data) => setProfileData(data))
+      .catch((err) => console.error("Fetch profile failed:", err));
   }, []);
 
   return (

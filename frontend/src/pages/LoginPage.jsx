@@ -1,43 +1,51 @@
+// LoginPage.js
 import React, { useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { FaUserTie, FaLock, FaUsers } from "react-icons/fa";
 
 function LoginPage() {
-  const [userType, setUserType] = useState("employee");
+  const [userType, setUserType] = useState("employee"); // employee หรือ admin (HR)
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const navigate = useNavigate();
 
-  const API_URL = process.env.REACT_APP_API_URL;
+  //const API_URL = process.env.REACT_APP_API_URL;
 
   const handleLogin = async (e) => {
     e.preventDefault();
     try {
       console.log("login attempt:", { username, password });
 
-      const res = await axios.post(
-        `${API_URL || "http://127.0.0.1:3000"}/api/login`,
-        { username, password }
-      );
+      const res = await axios.post("http://127.0.0.1:3000/api/login", { username, password });
 
       console.log("Backend response:", res.data);
 
-      const { token, role } = res.data; // backend ส่ง token + role
+      const { token, role } = res.data; // backend ต้องส่ง token + role
+      console.log("JWT token received:", token);
+
+      if (!token || !role) {
+        alert("Login failed: ไม่มี token หรือ role");
+        return;
+      }
+
+      // เก็บ token + role ลง localStorage
       localStorage.setItem("token", token);
       localStorage.setItem("role", String(role)); // ต้องเป็น string
 
-      // เพิ่ม debug
-      console.log("Saved in localStorage:", {
-        token: localStorage.getItem("token"),
-        role: localStorage.getItem("role")
-      });
+      // ตรวจสอบ role กับ select ที่เลือก
       const roleMapping = { employee: "1", admin: "2" };
-      if(roleMapping[userType] !== String(role)) {
-          alert("User role mismatch");
-          return;
+      if (roleMapping[userType] !== String(role)) {
+        alert("User role mismatch");
+        return;
       }
 
+      console.log("Saved in localStorage:", {
+        token: localStorage.getItem("token"),
+        role: localStorage.getItem("role"),
+      });
+
+      // redirect ตาม role
       if (String(role) === "2") navigate("/dashboard/hr");
       else if (String(role) === "1") navigate("/dashboard/employee");
       else alert("Unknown role");
@@ -51,7 +59,7 @@ function LoginPage() {
     <div
       className="d-flex align-items-center justify-content-center"
       style={{
-        minHeight: "100svh", // ใช้ svh/dvh ให้เต็มหน้าจอบนอุปกรณ์มือถือด้วย
+        minHeight: "100svh",
         width: "100vw",
         background: "linear-gradient(180deg, #0b1e39, #1f3a64)",
         fontFamily: "'Kanit', sans-serif",
