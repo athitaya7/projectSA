@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import axios from "axios";
 import {
   FaClipboardList,
   FaUmbrellaBeach,
@@ -7,50 +8,54 @@ import {
 } from "react-icons/fa";
 
 function LeaveInfoHR() {
-  const [leaveData, setLeaveData] = useState([
-    {
-      id: 1,
-      employeeName: "สมชาย ใจดี",
-      leaveType: "ลาพักร้อน",
-      startDate: "2025-10-01",
-      endDate: "2025-10-03",
-      totalDays: 3,
-      status: "รออนุมัติ",
-    },
-    {
-      id: 2,
-      employeeName: "สมศรี วงษ์ใหญ่",
-      leaveType: "ลาป่วย",
-      startDate: "2025-09-20",
-      endDate: "2025-09-22",
-      totalDays: 2,
-      status: "อนุมัติแล้ว",
-    },
-  ]);
+  const [leaveData, setLeaveData] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  // ✅ ดึงข้อมูลจาก backend
+  useEffect(() => {
+    axios
+      .get("http://localhost:3000/api/leaves") // 👈 เปลี่ยนพอร์ตให้ตรงกับ backend
+      .then((res) => {
+        setLeaveData(res.data);
+        setLoading(false);
+      })
+      .catch((err) => {
+        console.error("❌ Error fetching leave data:", err);
+        setLoading(false);
+      });
+  }, []);
 
   const updateStatus = (id, newStatus) => {
-    setLeaveData(
-      leaveData.map((leave) =>
-        leave.id === id ? { ...leave, status: newStatus } : leave
-      )
-    );
+    axios
+      .put(`http://localhost:3000/api/leaves/${id}`, { status: newStatus })
+      .then(() => {
+        setLeaveData((prev) =>
+          prev.map((leave) =>
+            leave.id === id ? { ...leave, status: newStatus } : leave
+          )
+        );
+      })
+      .catch((err) => console.error("❌ Error updating leave status:", err));
   };
+
+  if (loading) {
+    return <div className="text-center mt-5">กำลังโหลดข้อมูล...</div>;
+  }
 
   return (
     <div className="container-fluid" style={{ fontFamily: "'Kanit', sans-serif" }}>
-      {/* 🔹 หัวข้อหน้า */}
       <h4 className="fw-bold mb-4 d-flex align-items-center">
         <FaClipboardList className="me-2 text-primary" />
         จัดการข้อมูลการลาของพนักงาน
       </h4>
 
-      {/* 🔹 การ์ดสรุปภาพรวมวันลา */}
+      {/* 🔹 การ์ดสรุปภาพรวม */}
       <div className="row mb-4">
         <div className="col-md-4">
           <div className="card text-center shadow-sm border-0 rounded-4">
             <div className="card-body">
               <FaUmbrellaBeach size={28} className="text-primary mb-2" />
-              <h6 className="text-secondary mb-1">รวมวันลาพักร้อน</h6>
+              <h6 className="text-secondary mb-1">ลาพักร้อน</h6>
               <h4 className="fw-bold text-dark">
                 {leaveData.filter((l) => l.leaveType === "ลาพักร้อน").length} รายการ
               </h4>
@@ -62,7 +67,7 @@ function LeaveInfoHR() {
           <div className="card text-center shadow-sm border-0 rounded-4">
             <div className="card-body">
               <FaTemperatureHigh size={28} className="text-danger mb-2" />
-              <h6 className="text-secondary mb-1">รวมวันลาป่วย</h6>
+              <h6 className="text-secondary mb-1">ลาป่วย</h6>
               <h4 className="fw-bold text-dark">
                 {leaveData.filter((l) => l.leaveType === "ลาป่วย").length} รายการ
               </h4>
@@ -74,7 +79,7 @@ function LeaveInfoHR() {
           <div className="card text-center shadow-sm border-0 rounded-4">
             <div className="card-body">
               <FaUserTie size={28} className="text-info mb-2" />
-              <h6 className="text-secondary mb-1">รวมวันลากิจ</h6>
+              <h6 className="text-secondary mb-1">ลากิจ</h6>
               <h4 className="fw-bold text-dark">
                 {leaveData.filter((l) => l.leaveType === "ลากิจ").length} รายการ
               </h4>
@@ -83,7 +88,7 @@ function LeaveInfoHR() {
         </div>
       </div>
 
-      {/* 🔹 ตารางข้อมูลการลา */}
+      {/* 🔹 ตารางข้อมูล */}
       <div className="card shadow-sm border-0 rounded-4">
         <div className="card-body">
           <h6 className="fw-bold text-dark mb-3">ข้อมูลการลาของพนักงาน</h6>
@@ -117,7 +122,7 @@ function LeaveInfoHR() {
                     <td>
                       <span
                         className={`badge ${
-                          leave.status === "อนุมัติแล้ว"
+                          leave.status === "อนุมัติ"
                             ? "bg-success"
                             : leave.status === "ไม่อนุมัติ"
                             ? "bg-danger"
@@ -128,10 +133,9 @@ function LeaveInfoHR() {
                       </span>
                     </td>
                     <td className="text-center">
-                      {/* ✅ เหลือแค่ปุ่มอนุมัติ/ไม่อนุมัติ */}
                       <button
                         className="btn btn-outline-success btn-sm me-2 rounded-pill"
-                        onClick={() => updateStatus(leave.id, "อนุมัติแล้ว")}
+                        onClick={() => updateStatus(leave.id, "อนุมัติ")}
                       >
                         อนุมัติ
                       </button>

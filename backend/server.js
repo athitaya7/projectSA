@@ -16,9 +16,11 @@ const dbConfig = {
   database: "hrms"
 };
 
+// ✅ สร้าง connection pool สำหรับ MySQL
+const db = await mysql.createPool(dbConfig);
+
 // Secret key สำหรับ JWT
 const SECRET = "supersecretkey";
-
 // -------- Middleware ตรวจสอบ JWT ----------
 const authMiddleware = (roles=[]) => async (req,res,next)=>{
    const token = req.headers["authorization"]?.split(" ")[1];
@@ -365,74 +367,73 @@ app.get("/api/evaluation/details", authMiddleware(["employee", "hr"]), async (re
   }
 });
 
-app.get("/api/training", authMiddleware(["employee", "hr"]), async (req, res) => {
+// ✅ HR ดูได้ทั้งหมด, employee ดูของตัวเอง
+app.get("/api/training", authMiddleware(["hr", "employee"]), async (req, res) => {
   try {
-    const token = req.headers.authorization?.split(" ")[1];
-    if (!token) return res.status(401).json({ error: "Unauthorized" });
+    const user = req.user;
 
-    const decoded = jwt.verify(token, SECRET);
-    const userId = decoded.id;
+    let query = `
+      SELECT 
+        t.training_id,
+        t.employee_code,
+        CONCAT(e.first_name, ' ', e.last_name) AS employee_name,
+        t.course_name,
+        t.start_date,
+        t.end_date,
+        t.score,
+        t.result
+      FROM training t
+      JOIN employees e ON t.employee_code = e.employee_code
+    `;
 
-    const conn = await mysql.createConnection(dbConfig);
+    let params = [];
 
-    // ✅ ดึง employee_code ของ user นี้
-    const [empRows] = await conn.execute(
-      "SELECT employee_code FROM employees WHERE user_id = ?",
-      [userId]
-    );
-
-    if (empRows.length === 0) {
-      await conn.end();
-      return res.status(404).json({ error: "Employee not found" });
+    // ถ้าเป็น employee ให้ดูเฉพาะของตัวเอง
+    if (user.role === "employee") {
+      query += " WHERE e.user_id = ?";
+      params.push(user.id); // ✅ เปลี่ยนจาก user.userId → user.id
     }
 
-    const employeeCode = empRows[0].employee_code;
-
-    // ✅ ดึงประวัติการฝึกอบรมของพนักงานคนนั้น
-    const [rows] = await conn.execute(
-      `SELECT 
-         training_id,
-         course_name,
-         start_date,
-         end_date,
-         score,
-         result
-       FROM training
-       WHERE employee_code = ?
-       ORDER BY start_date DESC`,
-      [employeeCode]
-    );
-
-    await conn.end();
-
-    // ✅ จัดรูปข้อมูลให้หน้า React ใช้ง่าย
-    const formatted = rows.map(r => ({
-      certId: r.training_id,
-      courseName: r.course_name,
-      startDate: r.start_date ? r.start_date.toISOString().split('T')[0] : '',
-      endDate: r.end_date ? r.end_date.toISOString().split('T')[0] : '',
-      score: r.score || '-',
-      status: r.result,
-      certFile: r.certificate_file
-    }));
-
-    res.json(formatted);
+    const [rows] = await db.query(query, params);
+    res.json(rows);
   } catch (err) {
-    console.error("Training fetch error:", err);
-    res.status(500).json({ error: "Internal Server Error" });
+    console.error("❌ Error fetching training data:", err);
+    res.status(500).json({ error: err.message });
   }
 });
 
+
 // -------- Employee API ----------
 app.get("/api/documents", authMiddleware(["employee", "hr"]), async (req, res) => {
+  let conn;
   try {
+    // ✅ ดึงข้อมูลจาก token
     const token = req.headers.authorization?.split(" ")[1];
     const decoded = jwt.verify(token, SECRET);
     const userId = decoded.id;
+    const userRole = decoded.role; // ต้องแน่ใจว่า token เก็บ role มาด้วย เช่น "hr" หรือ "employee"
 
-    const conn = await mysql.createConnection(dbConfig);
+    conn = await mysql.createConnection(dbConfig);
 
-    // หารหัส employee_code จาก user_id
+    // ✅ ถ้า role เป็น HR → ดึงเอกสารพนักงานทั้งหมด
+    if (userRole === "hr") {
+      const [rows] = await conn.execute(`
+        SELECT 
+          d.doc_id AS id,
+          d.doc_name,
+          d.file_path,
+          d.upload_date,
+          e.employee_code,
+          CONCAT(e.first_name, ' ', e.last_name) AS employee_name
+        FROM documents d
+        JOIN employees e ON e.employee_code = d.employee_code
+        ORDER BY d.upload_date DESC
+      `);
+      await conn.end();
+      return res.json(rows);
+    }
+
+    // ✅ ถ้า role เป็น Employee → ดึงเฉพาะของตัวเอง
     const [empRows] = await conn.execute(
       "SELECT employee_code FROM employees WHERE user_id = ?",
       [userId]
@@ -445,9 +446,13 @@ app.get("/api/documents", authMiddleware(["employee", "hr"]), async (req, res) =
 
     const employeeCode = empRows[0].employee_code;
 
-    // ดึงเอกสารของพนักงาน
     const [docs] = await conn.execute(
-      `SELECT doc_id AS id, doc_name, file_path, upload_date
+      `SELECT 
+        doc_id AS id, 
+        doc_name, 
+        file_path, 
+        upload_date,
+        employee_code
        FROM documents
        WHERE employee_code = ?
        ORDER BY upload_date DESC`,
@@ -456,9 +461,13 @@ app.get("/api/documents", authMiddleware(["employee", "hr"]), async (req, res) =
 
     await conn.end();
     res.json(docs);
+
   } catch (err) {
-    console.error("Documents fetch error:", err);
+    console.error("❌ Documents fetch error:", err);
+    if (conn) await conn.end();
     res.status(500).json({ error: "Internal Server Error" });
+  } finally {
+    if (conn) await conn.end();
   }
 });
 
@@ -509,4 +518,619 @@ app.get("/api/analytics", authMiddleware(["hr"]), async (req,res)=>{
   res.json({ employees: emps, payroll: pay, performance: perf });
 });
 
-app.listen(3000, ()=>console.log("Server running on port 3000"));
+console.log("✅ Connected DB:", dbConfig.database);
+
+// ✅ เพิ่ม 2 บรรทัดนี้ก่อนใช้ conn
+const conn = await mysql.createConnection(dbConfig);
+const [tables] = await conn.execute("SHOW TABLES");
+
+console.log("📋 Tables in DB:", tables);
+await conn.end();
+
+// -------- HR Dashboard Summary ----------
+app.get("/api/hr/dashboard", authMiddleware(["hr"]), async (req, res) => {
+  try {
+    const conn = await mysql.createConnection(dbConfig);
+
+    // 1️⃣ จำนวนพนักงานทั้งหมด
+    const [[totalEmp]] = await conn.execute(`SELECT COUNT(*) AS total FROM employees`);
+
+    // 2️⃣ จำนวนพนักงานแยกตามแผนก
+    const [deptCounts] = await conn.execute(`
+      SELECT department, COUNT(*) AS count
+      FROM employees
+      GROUP BY department
+    `);
+
+    // 3️⃣ เงินเดือนเฉลี่ยทั้งหมด
+    const [[avgSalary]] = await conn.execute(`
+      SELECT AVG(total_salary) AS average_salary
+      FROM payroll
+    `);
+
+    // 4️⃣ คะแนนประเมินเฉลี่ย
+    const [[avgScore]] = await conn.execute(`
+      SELECT AVG(total_score) AS average_score
+      FROM PerformanceSummary
+    `);
+
+    // 5️⃣ การลาในเดือนล่าสุด
+    const [leaveStats] = await conn.execute(`
+      SELECT leave_type, COUNT(*) AS count
+      FROM leave_records
+      WHERE MONTH(start_date) = MONTH(CURDATE())
+        AND YEAR(start_date) = YEAR(CURDATE())
+      GROUP BY leave_type
+    `);
+
+    await conn.end();
+
+    // ✅ แปลงเป็นตัวเลขก่อนใช้ toFixed()
+    const avgSalaryNum = parseFloat(avgSalary?.average_salary) || 0;
+    const avgScoreNum = parseFloat(avgScore?.average_score) || 0;
+
+    // ✅ ส่งกลับ
+    res.json({
+      totalEmployees: totalEmp.total,
+      departments: deptCounts,
+      averageSalary: avgSalaryNum.toFixed(2),
+      averageScore: avgScoreNum.toFixed(2),
+      leaveThisMonth: leaveStats
+    });
+
+  } catch (err) {
+    console.error("HR Dashboard error:", err);
+    res.status(500).json({ message: "Internal Server Error", error: err.message });
+  }
+});
+
+// ✅ จัดการพนักงาน (HR Only)
+// ✅ เหลือตัวนี้ตัวเดียว
+app.get("/api/hr/employees", authMiddleware(["hr"]), async (req, res) => {
+  try {
+    const conn = await mysql.createConnection(dbConfig);
+
+    const [rows] = await conn.execute(`
+      SELECT 
+        e.employee_code,
+        e.first_name,
+        e.last_name,
+        e.position,
+        e.department AS department_name,
+        e.hire_date,
+        e.email,
+        e.phone,
+        p.total_salary AS salary
+      FROM employees e
+      LEFT JOIN payroll p ON e.employee_code = p.employee_code
+      ORDER BY e.employee_code ASC
+    `);
+
+    await conn.end();
+    res.json(rows);
+  } catch (err) {
+    console.error("❌ Error fetching employees:", err);
+    res.status(500).json({ message: "Server error", error: err.message });
+  }
+});
+
+// ✅ เพิ่มพนักงานใหม่ (เพิ่มแค่ใน employees, เงินเดือนไปจัดการที่ payroll)
+app.post("/api/hr/employees", authMiddleware(["hr"]), async (req, res) => {
+  try {
+    const {
+      employee_code,
+      first_name,
+      last_name,
+      gender,
+      birth_date,
+      national_id,
+      email,
+      phone,
+      address,
+      position,
+      department,
+      hire_date,
+      salary, // <-- จะใช้เพิ่ม payroll ทีหลัง
+    } = req.body;
+
+    const conn = await mysql.createConnection(dbConfig);
+    await conn.beginTransaction();
+
+    // เพิ่มใน employees
+    await conn.execute(
+      `
+      INSERT INTO employees (
+        employee_code, first_name, last_name, gender, birth_date, national_id, 
+        email, phone, address, position, department, hire_date
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `,
+      [
+        employee_code,
+        first_name,
+        last_name,
+        gender,
+        birth_date,
+        national_id,
+        email,
+        phone,
+        address,
+        position,
+        department,
+        hire_date,
+      ]
+    );
+
+    // เพิ่มใน payroll ด้วย (ถ้ามีค่า salary)
+    if (salary) {
+      await conn.execute(
+        `INSERT INTO payroll (employee_code, total_salary) VALUES (?, ?)`,
+        [employee_code, salary]
+      );
+    }
+
+    await conn.commit();
+    await conn.end();
+    res.json({ message: "✅ เพิ่มพนักงานใหม่เรียบร้อย" });
+  } catch (err) {
+    console.error("❌ Error adding employee:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+
+// ✅ แก้ไขข้อมูลพนักงาน
+// ✅ แก้ไขข้อมูลพนักงาน (HR Only)
+app.put("/api/hr/employees/:employee_code", authMiddleware(["hr"]), async (req, res) => {
+  try {
+    const { employee_code } = req.params;
+    const {
+      first_name,
+      last_name,
+      gender,
+      birth_date,
+      national_id,
+      email,
+      phone,
+      address,
+      position,
+      department,
+      hire_date,
+      salary,
+    } = req.body;
+
+    const conn = await mysql.createConnection(dbConfig);
+    await conn.beginTransaction();
+
+    // ✅ ตรวจว่ามีพนักงานนี้อยู่จริงก่อน
+    const [exist] = await conn.execute(
+      "SELECT employee_code FROM employees WHERE employee_code = ?",
+      [employee_code]
+    );
+    if (exist.length === 0) {
+      await conn.rollback();
+      await conn.end();
+      return res.status(404).json({ message: "❌ ไม่พบรหัสพนักงานนี้" });
+    }
+
+    // ✅ อัปเดตตาราง employees
+    const [result] = await conn.execute(
+      `
+      UPDATE employees
+      SET 
+        first_name = ?, 
+        last_name = ?, 
+        gender = ?, 
+        birth_date = ?, 
+        national_id = ?, 
+        email = ?, 
+        phone = ?, 
+        address = ?, 
+        position = ?, 
+        department = ?, 
+        hire_date = ?
+      WHERE employee_code = ?
+      `,
+      [
+        first_name,
+        last_name,
+        gender,
+        birth_date,
+        national_id,
+        email,
+        phone,
+        address,
+        position,
+        department,
+        hire_date,
+        employee_code,
+      ]
+    );
+
+    // ✅ อัปเดต payroll (ถ้ามี salary ส่งมา)
+    if (salary !== undefined && salary !== null) {
+      await conn.execute(
+        `
+        INSERT INTO payroll (employee_code, total_salary)
+        VALUES (?, ?)
+        ON DUPLICATE KEY UPDATE total_salary = VALUES(total_salary)
+        `,
+        [employee_code, salary]
+      );
+    }
+
+    await conn.commit();
+    await conn.end();
+
+    res.json({ message: "✅ แก้ไขข้อมูลพนักงานเรียบร้อย" });
+  } catch (err) {
+    console.error("❌ Error updating employee:", err);
+    res.status(500).json({ message: "Server error", error: err.message });
+  }
+});
+
+
+// ✅ ลบพนักงาน
+app.delete("/api/hr/employees/:employee_code", authMiddleware(["hr"]), async (req, res) => {
+  try {
+    const { employee_code } = req.params;
+    const conn = await mysql.createConnection(dbConfig);
+    await conn.beginTransaction();
+
+    // ลบ payroll ก่อน (กัน foreign key error)
+    await conn.execute(`DELETE FROM payroll WHERE employee_code = ?`, [employee_code]);
+
+    // ลบ employees
+    const [result] = await conn.execute(
+      `DELETE FROM employees WHERE employee_code = ?`,
+      [employee_code]
+    );
+
+    await conn.commit();
+    await conn.end();
+
+    if (result.affectedRows === 0)
+      return res.status(404).json({ message: "ไม่พบพนักงานที่ต้องการลบ" });
+
+    res.json({ message: "🗑️ ลบพนักงานเรียบร้อย" });
+  } catch (err) {
+    console.error("❌ Error deleting employee:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// ✅ เพิ่มพนักงานใหม่ (HR เท่านั้น)
+app.post("/api/hr/employees", authMiddleware(["hr"]), async (req, res) => {
+  try {
+    const {
+      first_name,
+      last_name,
+      department_name,
+      position,
+      salary,
+      hire_date,
+      email,
+      phone,
+      username,
+      password,
+    } = req.body;
+
+    const conn = await mysql.createConnection(dbConfig);
+    await conn.beginTransaction();
+
+    // INSERT employee
+    const [empResult] = await conn.execute(
+      `INSERT INTO employees (first_name, last_name, department, position, hire_date, email, phone)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [first_name, last_name, department_name, position, hire_date, email, phone]
+    );
+
+    const employee_code = empResult.insertId;
+
+    // INSERT payroll
+    await conn.execute(
+      `INSERT INTO payroll (employee_code, total_salary) VALUES (?, ?)`,
+      [employee_code, salary]
+    );
+
+    // INSERT users
+    await conn.execute(
+      `INSERT INTO users (username, password_hash, role_id)
+       VALUES (?, SHA2(?, 256), 1)`,
+      [username, password]
+    );
+
+    await conn.commit();
+    conn.end();
+
+    res.json({ employee_code, first_name, last_name, department_name, position, salary });
+  } catch (err) {
+    console.error("❌ Error adding employee:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// ✅ ดึงข้อมูล HR ตาม employee_code
+app.get("/api/hr/:id", async (req, res) => {
+  const { id } = req.params;
+  try {
+    const conn = await mysql.createConnection(dbConfig);
+    const [rows] = await conn.execute(
+      `SELECT employee_code, first_name, last_name, national_id, birth_date, gender,
+              phone, email, address, department, position, hire_date, status
+       FROM employees
+       WHERE employee_code = ?`,
+      [id]
+    );
+    await conn.end();
+
+    if (rows.length === 0) {
+      return res.status(404).json({ message: "❌ ไม่พบข้อมูล HR" });
+    }
+
+    console.log("✅ HR Data Found:", rows[0]);
+    res.json(rows[0]);
+  } catch (err) {
+    console.error("❌ Error fetching HR:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ✅ อัปเดตข้อมูล HR
+app.put("/api/hr/:employee_code", async (req, res) => {
+  const { employee_code } = req.params;
+  const { first_name, last_name, email, phone, address, department } = req.body;
+
+  try {
+    const [result] = await db.query(
+      `UPDATE employees 
+       SET first_name = ?, last_name = ?, email = ?, phone = ?, address = ?, department = ?
+       WHERE employee_code = ?`,
+      [first_name, last_name, email, phone, address, department, employee_code]
+    );
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: "Employee not found" });
+    }
+
+    res.json({ message: "HR info updated successfully" });
+  } catch (err) {
+    console.error("❌ Error updating HR info:", err);
+    res.status(500).json({ message: "Server error", error: err });
+  }
+});
+
+// ✅ ดึงข้อมูลการลาทั้งหมด
+app.get("/api/leaves", async (req, res) => {
+  try {
+    const conn = await mysql.createConnection(dbConfig);
+    const [rows] = await conn.execute(`
+      SELECT 
+        l.leave_id AS id,
+        CONCAT(e.first_name, ' ', e.last_name) AS employeeName,
+        l.leave_type AS leaveType,
+        l.start_date AS startDate,
+        l.end_date AS endDate,
+        DATEDIFF(l.end_date, l.start_date) + 1 AS totalDays,
+        l.status AS status
+      FROM leave_records l
+      JOIN employees e ON l.employee_code = e.employee_code
+      ORDER BY l.start_date DESC
+    `);
+    await conn.end();
+
+    console.log("✅ ดึงข้อมูลการลาสำเร็จ:", rows.length, "รายการ");
+    res.json(rows);
+  } catch (err) {
+    console.error("❌ Error fetching leave records:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ✅ อัปเดตสถานะการลา
+app.put("/api/leaves/:id", async (req, res) => {
+  const { id } = req.params;
+  const { status } = req.body;
+
+  try {
+    const conn = await mysql.createConnection(dbConfig);
+    const [result] = await conn.execute(
+      `UPDATE leave_records SET status = ? WHERE leave_id = ?`,
+      [status, id]
+    );
+    await conn.end();
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: "ไม่พบข้อมูลการลา" });
+    }
+
+    console.log(`✅ อัปเดตสถานะใบลา ID ${id} เป็น ${status}`);
+    res.json({ message: "อัปเดตสถานะใบลาสำเร็จ" });
+  } catch (err) {
+    console.error("❌ Error updating leave:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ✅ ดึงข้อมูลการฝึกอบรมทั้งหมด
+app.get("/api/training", async (req, res) => {
+  try {
+    const [rows] = await db.query(`
+      SELECT 
+        t.training_id,
+        t.employee_code,
+        CONCAT(e.first_name, ' ', e.last_name) AS employee_name,
+        t.course_name,
+        t.start_date,
+        t.end_date,
+        t.score,
+        t.result
+      FROM training t
+      JOIN employees e ON t.employee_code = e.employee_code
+      ORDER BY t.start_date DESC
+    `);
+    res.json(rows);
+  } catch (err) {
+    console.error("❌ Error fetching training data:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ✅ เพิ่มข้อมูลการฝึกอบรมใหม่
+app.post("/api/training", async (req, res) => {
+  const { employee_code, course_name, start_date, end_date, score, result } = req.body;
+  try {
+    await db.query(
+      `INSERT INTO training (employee_code, course_name, start_date, end_date, score, result)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [employee_code, course_name, start_date, end_date, score, result]
+    );
+    res.json({ message: "เพิ่มข้อมูลการฝึกอบรมสำเร็จ ✅" });
+  } catch (err) {
+    console.error("❌ Error adding training:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ✅ ลบข้อมูลการฝึกอบรม
+app.delete("/api/training/:id", async (req, res) => {
+  const { id } = req.params;
+  try {
+    await db.query(`DELETE FROM training WHERE training_id = ?`, [id]);
+    res.json({ message: "ลบข้อมูลการฝึกอบรมเรียบร้อย ✅" });
+  } catch (err) {
+    console.error("❌ Error deleting training:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ✅ HR เห็นเอกสารของพนักงานทุกคน
+app.get("/api/hr/documents", authMiddleware(["hr"]), async (req, res) => {
+  try {
+    const [rows] = await db.query(`
+      SELECT 
+        d.id,
+        d.doc_name AS title,
+        d.file_path AS file_url,
+        d.upload_date,
+        e.employee_code,
+        CONCAT(e.first_name, ' ', e.last_name) AS employee_name
+      FROM documents d
+      JOIN employees e ON e.employee_code = d.employee_code
+      ORDER BY d.upload_date DESC
+    `);
+
+    res.json(rows);
+  } catch (err) {
+    console.error("Error fetching documents:", err);
+    res.status(500).json({ message: "Database error" });
+  }
+});
+
+app.get("/api/workinfo/:employee_code", async (req, res) => {
+  const { employee_code } = req.params;
+
+  try {
+    // 🔹 ดึงข้อมูลพื้นฐานพนักงาน + เงินเดือน โบนัส จาก payroll + work_info
+    const [rows] = await db.execute(
+      `SELECT 
+        e.employee_code,
+        CONCAT(e.first_name, ' ', e.last_name) AS full_name,
+        e.position,
+        e.department,
+        e.hire_date,
+        w.start_date,
+        w.experience_years,
+        p.total_salary,
+        p.bonus
+      FROM employees e
+      LEFT JOIN work_info w ON e.employee_code = w.employee_code
+      LEFT JOIN payroll p ON e.employee_code = p.employee_code
+      WHERE e.employee_code = ?`,
+      [employee_code]
+    );
+
+    // 🔸 ถ้าไม่เจอพนักงาน
+    if (rows.length === 0) {
+      return res.status(404).json({ message: "Employee not found" });
+    }
+
+    const workInfo = rows[0];
+
+    // 🔹 ดึงข้อมูลการเลื่อนตำแหน่งจาก promotions
+    const [promotions] = await db.execute(
+      `SELECT old_position, new_position, promotion_date, remark, approved_by
+      FROM promotions
+      WHERE TRIM(UPPER(employee_code)) = TRIM(UPPER('${employee_code}'))
+      ORDER BY promotion_date ASC`
+    );
+
+    // 🔹 รวมข้อมูลทั้งหมด
+    const result = {
+      employee_code: workInfo.employee_code,
+      full_name: workInfo.full_name,
+      position: workInfo.position,
+      department: workInfo.department,
+      hire_date: workInfo.hire_date,
+      work_years: workInfo.experience_years,
+      total_salary: workInfo.total_salary,
+      bonus: workInfo.bonus,
+      transfer_history: promotions && promotions.length > 0
+      ? promotions.map(p => ({
+          date: p.promotion_date,
+          old_position: p.old_position,
+          new_position: p.new_position,
+          note: p.remark,
+          approved_by: p.approved_by
+        }))
+    : []
+    };
+
+    console.log("✅ WorkInfo:", result);
+    res.json(result);
+  } catch (err) {
+    console.error("❌ Error fetching work info:", err);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+// ✅ ดึงข้อมูลการเงินของพนักงานรายคน (เชื่อม payroll + tax_deductions)
+app.get("/api/finance/:employee_code", async (req, res) => {
+  const { employee_code } = req.params;
+  try {
+    const [rows] = await db.execute(
+      `
+      SELECT 
+        e.employee_code,
+        e.first_name,
+        e.last_name,
+        p.base_salary AS baseSalary,
+        p.allowance AS allowance,
+        p.bonus AS bonus,
+        p.total_salary AS totalSalary,
+        p.bank_name AS bankName,
+        p.bank_branch AS bankBranch,
+        p.account_no AS accountNo,
+        COALESCE(t.income_tax, 0) AS incomeTax,
+        COALESCE(t.social_security, 0) AS socialSecurity,
+        COALESCE(t.provident_fund, 0) AS providentFund
+      FROM employees e
+      LEFT JOIN payroll p ON e.employee_code = p.employee_code
+      LEFT JOIN tax_deductions t ON e.employee_code = t.employee_code
+      WHERE e.employee_code = ?
+      `,
+      [employee_code]
+    );
+
+    if (rows.length === 0) {
+      return res.status(404).json({ message: "ไม่พบข้อมูลพนักงาน" });
+    }
+
+    res.json(rows[0]);
+  } catch (err) {
+    console.error("❌ Error fetching finance data:", err);
+    res.status(500).json({ message: "Error fetching finance data" });
+  }
+});
+
+
+app.listen(3000, ()=>console.log("Server running on http://localhost:3000"));

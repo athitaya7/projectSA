@@ -8,24 +8,38 @@ function Login() {
   const [password, setPassword] = useState("");
   const navigate = useNavigate();
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
 
-    // ✅ ตรวจสอบสิทธิ์การเข้าสู่ระบบ
-    if (userType === "admin") {
-      if (userId === "hr" && password === "1234") {
-        localStorage.setItem("adminToken", "auth_success");
-        navigate("/dashboard"); // ไปหน้า Dashboard ของ HR
+    try {
+      const response = await fetch("http://127.0.0.1:3000/api/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          username: userId,
+          password: password,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.token) {
+        // ✅ เก็บ token ไว้ใช้เรียก API อื่น
+        localStorage.setItem("token", data.token);
+        localStorage.setItem("role", data.role);
+
+        // ✅ ไปหน้า HR หรือ Employee ตาม role
+        if (data.role === "hr") {
+          navigate("/hr/dashboard");
+        } else {
+          navigate("/employee/dashboard");
+        }
       } else {
-        alert("ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง");
+        alert(data.message || "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง");
       }
-    } else if (userType === "employee") {
-      if (userId === "emp" && password === "1234") {
-        localStorage.setItem("empToken", "auth_success");
-        navigate("/dashboard"); // ไปหน้า Dashboard ของพนักงาน
-      } else {
-        alert("ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง");
-      }
+    } catch (err) {
+      console.error("Login error:", err);
+      alert("เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์");
     }
   };
 
@@ -107,10 +121,7 @@ function Login() {
               <input
                 type="text"
                 className="form-control border-0 bg-transparent"
-                placeholder={
-                  userType === "admin"
-              
-                }
+                placeholder={userType === "admin" ? "HR Username" : "Employee Username"}
                 value={userId}
                 onChange={(e) => setUserId(e.target.value)}
                 required
@@ -133,7 +144,7 @@ function Login() {
               <input
                 type="password"
                 className="form-control border-0 bg-transparent"
-                placeholder=""
+                placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required

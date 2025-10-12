@@ -1,19 +1,18 @@
-import React, { useState } from "react";
-import { FaUserTie, FaEnvelope, FaPhone, FaHome} from "react-icons/fa";
+import React, { useState, useEffect } from "react";
+import { FaUserTie, FaEnvelope, FaPhone, FaHome } from "react-icons/fa";
+import axios from "axios";
 
 function HistoryHR() {
-  const [hrInfo, setHrInfo] = useState({
-    hrId: "-",
-    name: "-",
-    position: "-",
-    department: "-",
-    startDate: "-",
-    phone: "-",
-    email: "-",
-    address: "-",
-  });
-
+  const [hrInfo, setHrInfo] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
+  const hrId = "HR001"; // 🔹 รหัสพนักงาน HR จริง (อาจดึงจาก localStorage)
+
+  useEffect(() => {
+    axios
+      .get(`http://localhost:3000/api/hr/${hrId}`)
+      .then((res) => setHrInfo(res.data))
+      .catch((err) => console.error("❌ Error fetching HR info:", err));
+  }, [hrId]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -21,13 +20,19 @@ function HistoryHR() {
   };
 
   const handleSave = () => {
-    setIsEditing(false);
-    alert("✅ บันทึกข้อมูล HR สำเร็จแล้ว!");
+    axios
+      .put(`http://localhost:3000/api/hr/${hrId}`, hrInfo)
+      .then(() => {
+        setIsEditing(false);
+        alert("✅ บันทึกข้อมูล HR สำเร็จแล้ว!");
+      })
+      .catch((err) => console.error("❌ Error updating HR info:", err));
   };
+
+  if (!hrInfo) return <div className="text-center mt-5">กำลังโหลดข้อมูล...</div>;
 
   return (
     <div className="container mt-4" style={{ fontFamily: "'Kanit', sans-serif" }}>
-      {/* 🔹 หัวข้อ */}
       <div className="d-flex align-items-center mb-4">
         <FaUserTie size={20} className="me-2 text-primary" />
         <h4 className="fw-bold mb-0" style={{ color: "#0b1e39" }}>
@@ -35,64 +40,60 @@ function HistoryHR() {
         </h4>
       </div>
 
-      {/* 🔹 การ์ดข้อมูล */}
       <div className="card shadow-sm border-0 rounded-4 mb-4">
         <div className="p-3 fw-bold text-dark border-bottom bg-light">
-          ข้อมูลส่วนตัวของ
+          ข้อมูลส่วนตัวของ {hrInfo.first_name} {hrInfo.last_name}
         </div>
 
         <div className="p-4">
           <div className="row">
             <div className="col-md-4 mb-3">
               <strong>รหัสพนักงาน</strong>
-              <div>{hrInfo.hrId}</div>
+              <div>{hrInfo.employee_code}</div>
             </div>
+
             <div className="col-md-4 mb-3">
-              <strong>ชื่อ-นามสกุล</strong>
+              <strong>ชื่อ</strong>
               {isEditing ? (
                 <input
                   type="text"
-                  name="name"
+                  name="first_name"
                   className="form-control"
-                  value={hrInfo.name}
+                  value={hrInfo.first_name || ""}
                   onChange={handleChange}
                 />
               ) : (
-                <div>{hrInfo.name}</div>
+                <div>{hrInfo.first_name}</div>
               )}
             </div>
+
             <div className="col-md-4 mb-3">
-              <strong>ตำแหน่ง</strong>
+              <strong>นามสกุล</strong>
               {isEditing ? (
                 <input
                   type="text"
-                  name="position"
+                  name="last_name"
                   className="form-control"
-                  value={hrInfo.position}
+                  value={hrInfo.last_name || ""}
                   onChange={handleChange}
                 />
               ) : (
-                <div>{hrInfo.position}</div>
+                <div>{hrInfo.last_name}</div>
               )}
             </div>
 
             <div className="col-md-4 mb-3">
               <strong>แผนก</strong>
-              {isEditing ? (
-                <input
-                  type="text"
-                  name="department"
-                  className="form-control"
-                  value={hrInfo.department}
-                  onChange={handleChange}
-                />
-              ) : (
-                <div>{hrInfo.department}</div>
-              )}
+              <div>{hrInfo.department || "-"}</div>
             </div>
+
             <div className="col-md-4 mb-3">
               <strong>วันที่เริ่มงาน</strong>
-              <div>{hrInfo.startDate}</div>
+              <div>
+                {hrInfo.hire_date
+                  ? new Date(hrInfo.hire_date).toLocaleDateString("th-TH")
+                  : "-"}
+              </div>
             </div>
 
             <div className="col-md-4 mb-3">
@@ -102,13 +103,13 @@ function HistoryHR() {
                   type="text"
                   name="phone"
                   className="form-control"
-                  value={hrInfo.phone}
+                  value={hrInfo.phone || ""}
                   onChange={handleChange}
                 />
               ) : (
                 <div>
                   <FaPhone className="me-1 text-secondary" />
-                  {hrInfo.phone}
+                  {hrInfo.phone || "-"}
                 </div>
               )}
             </div>
@@ -120,13 +121,13 @@ function HistoryHR() {
                   type="email"
                   name="email"
                   className="form-control"
-                  value={hrInfo.email}
+                  value={hrInfo.email || ""}
                   onChange={handleChange}
                 />
               ) : (
                 <div>
                   <FaEnvelope className="me-1 text-secondary" />
-                  {hrInfo.email}
+                  {hrInfo.email || "-"}
                 </div>
               )}
             </div>
@@ -138,13 +139,13 @@ function HistoryHR() {
                   name="address"
                   className="form-control"
                   rows="2"
-                  value={hrInfo.address}
+                  value={hrInfo.address || ""}
                   onChange={handleChange}
                 />
               ) : (
                 <div>
                   <FaHome className="me-1 text-secondary" />
-                  {hrInfo.address}
+                  {hrInfo.address || "-"}
                 </div>
               )}
             </div>
@@ -152,13 +153,9 @@ function HistoryHR() {
         </div>
       </div>
 
-      {/* 🔹 ปุ่มบันทึก / แก้ไข */}
       <div className="text-end">
         {isEditing ? (
-          <button
-            className="btn btn-success px-4 rounded-pill"
-            onClick={handleSave}
-          >
+          <button className="btn btn-success px-4 rounded-pill" onClick={handleSave}>
             บันทึก
           </button>
         ) : (
@@ -166,12 +163,11 @@ function HistoryHR() {
             className="btn btn-outline-primary px-4 rounded-pill"
             onClick={() => setIsEditing(true)}
           >
-             แก้ไขข้อมูล
+            แก้ไขข้อมูล
           </button>
         )}
       </div>
 
-      {/* ✅ CSS */}
       <style>
         {`
           .card {

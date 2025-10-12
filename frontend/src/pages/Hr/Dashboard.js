@@ -1,124 +1,82 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
   FaUsers,
-  FaUserPlus,
-  FaUserMinus,
-  FaFileContract,
   FaChartLine,
-  FaChalkboardTeacher,
+  FaCalendarCheck,
 } from "react-icons/fa";
 import { BiBarChartAlt2 } from "react-icons/bi";
 import {
   Chart as ChartJS,
   ArcElement,
   BarElement,
-  LineElement,
   CategoryScale,
   LinearScale,
   Tooltip,
   Legend,
-  PointElement,
 } from "chart.js";
-import { Pie, Bar, Line } from "react-chartjs-2";
 
-ChartJS.register(
-  ArcElement,
-  BarElement,
-  LineElement,
-  PointElement,
-  CategoryScale,
-  LinearScale,
-  Tooltip,
-  Legend
-);
+import { Pie, Bar } from "react-chartjs-2";
+
+ChartJS.register(ArcElement, BarElement, CategoryScale, LinearScale, Tooltip, Legend);
 
 function Dashboard() {
-  const data = {
-    totalEmployees: 120,
-    newEmployees: 6,
-    resignedEmployees: 4,
-    expiringContracts: 3,
-    trainingCourses: 8,
-    avgEvaluation: 85,
-  };
+  const [dashboard, setDashboard] = useState(null);
 
-  // 🔹 กราฟวงกลม: สัดส่วนเพศ
-  const genderData = {
-    labels: ["ชาย", "หญิง", "อื่น ๆ"],
-    datasets: [
-      {
-        data: [60, 50, 10],
-        backgroundColor: ["#36A2EB", "#FF6384", "#FFCE56"],
-        borderWidth: 0,
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+
+    fetch("http://127.0.0.1:3000/api/hr/dashboard", {
+      headers: {
+        Authorization: `Bearer ${token}`,
       },
-    ],
-  };
+    })
+      .then((res) => {
+        if (!res.ok) throw new Error("❌ Unauthorized or token missing");
+        return res.json();
+      })
+      .then(setDashboard)
+      .catch((err) => console.error("❌ Dashboard fetch error:", err));
+  }, []);
 
-  // 🔹 กราฟแท่ง: เงินเดือนเฉลี่ยตามตำแหน่ง
-  const salaryData = {
-    labels: ["HR", "บัญชี", "IT", "ฝ่ายผลิต", "ขาย"],
-    datasets: [
-      {
-        label: "เงินเดือนเฉลี่ย (บาท)",
-        data: [25000, 28000, 35000, 22000, 30000],
-        backgroundColor: "#5B86E5",
-      },
-    ],
-  };
+  if (!dashboard) return <p className="text-center mt-5">⏳ กำลังโหลดข้อมูล...</p>;
 
-  // 🔹 กราฟแท่งแนวนอน: จำนวนพนักงานในแต่ละแผนก
+  // ✅ ดึงข้อมูลจาก response จริง
+  const {
+    totalEmployees,
+    departments = [],
+    averageSalary,
+    averageScore,
+    leaveThisMonth = [],
+  } = dashboard;
+
+  // 🔹 กราฟจำนวนพนักงานแต่ละแผนก
   const deptData = {
-    labels: ["HR", "บัญชี", "IT", "ฝ่ายผลิต", "ขาย"],
+    labels: departments.map((d) => d.department),
     datasets: [
       {
         label: "จำนวนพนักงาน",
-        data: [10, 15, 25, 30, 20],
-        backgroundColor: "#43E97B",
+        data: departments.map((d) => d.count),
+        backgroundColor: "#36A2EB",
       },
     ],
   };
 
-  // 🔹 กราฟเส้น: จำนวนพนักงานที่ลาออกแต่ละปี
-  const resignedByYear = {
-    labels: ["2020", "2021", "2022", "2023", "2024"],
+  // 🔹 กราฟการลาในเดือนนี้
+  const leaveData = {
+    labels: leaveThisMonth.map((l) => l.leave_type),
     datasets: [
       {
-        label: "จำนวนพนักงานที่ลาออก",
-        data: [5, 8, 6, 10, 7],
-        borderColor: "#FF6384",
-        backgroundColor: "rgba(255,99,132,0.3)",
-        tension: 0.3,
-        fill: true,
-        pointBackgroundColor: "#FF6384",
+        data: leaveThisMonth.map((l) => l.count),
+        backgroundColor: ["#FF6384", "#36A2EB", "#FFCE56", "#4BC0C0"],
       },
     ],
   };
 
-  // 🔹 กราฟแท่ง: เงินเดือนเฉลี่ยต่อปี
-  const avgSalaryYear = {
-    labels: ["2020", "2021", "2022", "2023", "2024"],
-    datasets: [
-      {
-        label: "เงินเดือนเฉลี่ย (บาท)",
-        data: [25000, 26500, 28000, 29500, 31000],
-        backgroundColor: "rgba(91,134,229,0.8)",
-      },
-    ],
-  };
-
-  // 🔹 Options สำหรับกราฟ
   const barOptions = {
     responsive: true,
-    plugins: {
-      legend: { display: false },
-    },
-    scales: {
-      x: { grid: { display: false } },
-      y: { grid: { display: false }, ticks: { stepSize: 5 } },
-    },
+    plugins: { legend: { display: false } },
+    scales: { x: { grid: { display: false } }, y: { grid: { display: false } } },
   };
-
-  const horizontalBarOptions = { ...barOptions, indexAxis: "y" };
 
   return (
     <div className="container mt-4" style={{ fontFamily: "'Kanit', sans-serif" }}>
@@ -138,39 +96,21 @@ function Dashboard() {
         {[
           {
             title: "พนักงานทั้งหมด",
-            value: `${data.totalEmployees} คน`,
+            value: `${totalEmployees || 0} คน`,
             icon: <FaUsers size={22} color="white" />,
             color: "linear-gradient(135deg, #36D1DC, #5B86E5)",
           },
           {
-            title: "พนักงานเข้าใหม่เดือนนี้",
-            value: `${data.newEmployees} คน`,
-            icon: <FaUserPlus size={22} color="white" />,
-            color: "linear-gradient(135deg, #43E97B, #38F9D7)",
-          },
-          {
-            title: "พนักงานลาออกเดือนนี้",
-            value: `${data.resignedEmployees} คน`,
-            icon: <FaUserMinus size={22} color="white" />,
-            color: "linear-gradient(135deg, #FF6A88, #FF99AC)",
-          },
-          {
-            title: "สัญญาจ้างใกล้หมดอายุ",
-            value: `${data.expiringContracts} ฉบับ`,
-            icon: <FaFileContract size={22} color="white" />,
-            color: "linear-gradient(135deg, #F7971E, #FFD200)",
-          },
-          {
-            title: "หลักสูตรอบรมปีนี้",
-            value: `${data.trainingCourses} หลักสูตร`,
-            icon: <FaChalkboardTeacher size={22} color="white" />,
-            color: "linear-gradient(135deg, #00C6FF, #0072FF)",
+            title: "เงินเดือนเฉลี่ย",
+            value: `${averageSalary || 0} บาท`,
+            icon: <FaChartLine size={22} color="white" />,
+            color: "linear-gradient(135deg, #9b59b6, #8e44ad)",
           },
           {
             title: "คะแนนประเมินเฉลี่ย",
-            value: `${data.avgEvaluation} คะแนน`,
-            icon: <FaChartLine size={22} color="white" />,
-            color: "linear-gradient(135deg, #9b59b6, #8e44ad)",
+            value: `${averageScore || 0} คะแนน`,
+            icon: <FaCalendarCheck size={22} color="white" />,
+            color: "linear-gradient(135deg, #F7971E, #FFD200)",
           },
         ].map((card, index) => (
           <div className="col-md-4" key={index}>
@@ -185,48 +125,27 @@ function Dashboard() {
         ))}
       </div>
 
-      {/* ---------- กราฟส่วนล่าง ---------- */}
+      {/* ---------- กราฟ ---------- */}
       <div className="row g-4 mb-5">
-        <div className="col-md-4">
-          <div className="card shadow-sm border-0 p-3 rounded-4">
-            <h6 className="fw-bold mb-3 text-center">สัดส่วนเพศพนักงาน</h6>
-            <Pie data={genderData} />
-          </div>
-        </div>
-
-        <div className="col-md-4">
-          <div className="card shadow-sm border-0 p-3 rounded-4">
-            <h6 className="fw-bold mb-3 text-center">เงินเดือนเฉลี่ยตามตำแหน่ง</h6>
-            <Bar data={salaryData} options={barOptions} />
-          </div>
-        </div>
-
-        <div className="col-md-4">
+        <div className="col-md-6">
           <div className="card shadow-sm border-0 p-3 rounded-4">
             <h6 className="fw-bold mb-3 text-center">จำนวนพนักงานในแต่ละแผนก</h6>
-            <Bar data={deptData} options={horizontalBarOptions} />
-          </div>
-        </div>
-      </div>
-
-      {/* ---------- กราฟวิเคราะห์เพิ่มเติม ---------- */}
-      <div className="row g-4 mb-5">
-        <div className="col-md-6">
-          <div className="card shadow-sm border-0 p-3 rounded-4">
-            <h6 className="fw-bold mb-3 text-center">พนักงานที่ลาออกแต่ละปี</h6>
-            <Line data={resignedByYear} />
+            <Bar data={deptData} options={barOptions} />
           </div>
         </div>
 
         <div className="col-md-6">
           <div className="card shadow-sm border-0 p-3 rounded-4">
-            <h6 className="fw-bold mb-3 text-center">เงินเดือนเฉลี่ยต่อปี</h6>
-            <Bar data={avgSalaryYear} options={barOptions} />
+            <h6 className="fw-bold mb-3 text-center">สถิติการลาในเดือนนี้</h6>
+            {leaveThisMonth.length > 0 ? (
+              <Pie data={leaveData} />
+            ) : (
+              <p className="text-center text-secondary">ไม่มีข้อมูลการลาในเดือนนี้</p>
+            )}
           </div>
         </div>
       </div>
 
-      {/* ---------- CSS ---------- */}
       <style>
         {`
           .dashboard-card {
