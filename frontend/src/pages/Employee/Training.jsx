@@ -7,8 +7,27 @@ function Training() {
   const [trainingHistory, setTrainingHistory] = useState([]);
 
   const handleDownload = (certId) => {
-    console.log('Download certificate:', certId);
+    window.open(`http://localhost:3000/api/training/certificate/${certId}`, "_blank");
   };
+
+  useEffect(() => {
+    const fetchTrainings = async () => {
+      const token = localStorage.getItem("token");
+      if (!token) return;
+
+      try {
+        const res = await fetch("http://localhost:3000/api/training", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const data = await res.json();
+        setTrainingHistory(data);
+      } catch (err) {
+        console.error("Error fetching trainings:", err);
+      }
+    };
+
+    fetchTrainings();
+  }, []);
 
   return (
     <div className="training-page">
@@ -29,6 +48,7 @@ function Training() {
               </tr>
             </thead>
             <tbody>
+              {console.log(trainingHistory)}
               {trainingHistory.length > 0 ? (
                 trainingHistory.map((training, index) => (
                   <tr key={index}>
@@ -39,8 +59,15 @@ function Training() {
                       <span className="score-badge">{training.score}</span>
                     </td>
                     <td>
-                      <span className={`status-badge status-${training.status}`}>
-                        {training.status}
+                      <span 
+                        className={`status-badge ${
+                          training.status === "ผ่าน"
+                          ? "status-pass"
+                          : training.status === "ไม่ผ่าน"
+                          ? "status-fail"
+                          : "status-pending"
+                        }`}>
+                          {training.status || "-"}
                       </span>
                     </td>
                     <td>

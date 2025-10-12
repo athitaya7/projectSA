@@ -158,3 +158,56 @@
   font-weight: 600;
 }
 
+.documents-grid, .contacts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1rem;
+}
+
+.document-card, .contact-card {
+  background: #fff;
+  padding: 1rem;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  transition: transform 0.2s;
+}
+
+.document-card:hover, .contact-card:hover {
+  transform: translateY(-4px);
+}
+
+.action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.view-btn {
+  background-color: #3498db;
+  color: white;
+}
+
+.download-btn {
+  background-color: #2ecc71;
+  color: white;
+}
+
+.view-btn:hover {
+  background-color: #2980b9;
+}
+
+.download-btn:hover {
+  background-color: #27ae60;
+}
+
+.contact-icon {
+  background-color: #6366f1;
+  padding: 6px;
+  border-radius: 50%;
+}

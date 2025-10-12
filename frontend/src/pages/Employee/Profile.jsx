@@ -12,28 +12,24 @@ function Profile() {
     workInfo: {},
     salaryInfo: {},
     taxInfo: {},
-    benefits: []
+    benefits: [],
   });
 
   useEffect(() => {
+  const fetchProfile = async () => {
     const token = localStorage.getItem("token");
-    console.log("Token used for profile fetch:", token); // ✅ แสดง token
-    
-    fetch("http://127.0.0.1:3000/api/profile", { 
+    const res = await fetch("http://127.0.0.1:3000/api/profile", {
       headers: {
         Authorization: `Bearer ${token}`,
+        "Cache-Control": "no-store", // 👈 ปิด cache ฝั่ง client ด้วย
       },
-    })
-      .then(async (res) => {
-        if (!res.ok) {
-          const text = await res.text();
-          throw new Error(`HTTP ${res.status}: ${text}`);
-        }
-        return res.json();
-      })  
-      .then((data) => setProfileData(data))
-      .catch((err) => console.error("Fetch profile failed:", err));
-  }, []);
+    });
+    const data = await res.json();
+    console.log("Profile Data:", data);
+    setProfileData(data);
+  };
+  fetchProfile();
+}, []);
 
   return (
     <div className="profile-page">

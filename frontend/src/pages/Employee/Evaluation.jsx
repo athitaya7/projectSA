@@ -1,72 +1,110 @@
-// ============================================
-// ไฟล์: src/pages/Evaluation.jsx
-// ============================================
-import { useState, useEffect } from 'react';
-import PageHeader from "../../../src/components/PageHeader";
-import { Star } from 'lucide-react';
-import './Evaluation.css';
+import "./Evaluation.css";
+import { useEffect, useState } from "react";
 
 function Evaluation() {
-  const [evaluationData, setEvaluationData] = useState({
-    employeeInfo: {},
-    scores: []
-  });
+  const [employeeInfo, setEmployeeInfo] = useState(null);
+  const [evaluationDetails, setEvaluationDetails] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // TODO: Fetch data from backend
-    // fetch('/api/evaluation')
-    //   .then(res => res.json())
-    //   .then(data => setEvaluationData(data));
+    const token = localStorage.getItem("token"); // เอา JWT ที่ได้ตอน login มาใช้
+
+    if (!token) {
+      alert("กรุณาเข้าสู่ระบบก่อนเข้าหน้านี้");
+      return;
+    }
+
+    const fetchData = async () => {
+      try {
+        // ✅ ดึงข้อมูลรวมจาก /api/evaluation
+        const evalRes = await fetch("http://localhost:3000/api/evaluation", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        const evalData = await evalRes.json();
+
+        // ✅ ดึงรายละเอียดแต่ละด้านจาก /api/evaluation/details
+        const detailRes = await fetch("http://localhost:3000/api/evaluation/details", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        const detailData = await detailRes.json();
+
+        // ✅ รวมข้อมูลเข้า state
+        setEmployeeInfo({
+          name: `${evalData.employee.first_name} ${evalData.employee.last_name}`,
+          employeeId: evalData.employee.employee_code,
+          position: evalData.employee.position,
+          department: evalData.employee.department,
+          overallScore: evalData.evaluation.total_score,
+          feedback: "ยังไม่มีข้อเสนอแนะจากหัวหน้างาน", // ถ้ามีใน DB ค่อยเพิ่ม
+        });
+
+        setEvaluationDetails(detailData);
+      } catch (error) {
+        console.error("Error fetching evaluation data:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
   }, []);
+
+  if (loading) return <p>กำลังโหลดข้อมูล...</p>;
+  if (!employeeInfo) return <p>ไม่พบข้อมูลการประเมิน</p>;
 
   return (
     <div className="evaluation-page">
-      <PageHeader title="ผลการประเมิน" icon={<Star />} />
-
-      <section className="employee-info-section">
-        <div className="info-row">
-          <div className="info-field">
-            <label>ชื่อ-สกุล</label>
-            <p>{evaluationData.employeeInfo.fullName || '-'}</p>
-          </div>
-          <div className="info-field">
-            <label>รหัสพนักงาน</label>
-            <p>{evaluationData.employeeInfo.employeeId || '-'}</p>
-          </div>
-          <div className="info-field">
-            <label>ตำแหน่ง</label>
-            <p>{evaluationData.employeeInfo.position || '-'}</p>
-          </div>
-          <div className="info-field">
-            <label>แผนก</label>
-            <p>{evaluationData.employeeInfo.department || '-'}</p>
+      {/* ส่วนหัวพื้นน้ำเงิน */}
+      <div className="evaluation-header">
+        <div className="header-left">
+          <h1>ผลการประเมินประจำปี 2024</h1>
+          <div className="employee-info">
+            <p><strong>ชื่อ:</strong> {employeeInfo.name}</p>
+            <p><strong>รหัสพนักงาน:</strong> {employeeInfo.employeeId}</p>
+            <p><strong>ตำแหน่ง:</strong> {employeeInfo.position}</p>
+            <p><strong>แผนก:</strong> {employeeInfo.department}</p>
           </div>
         </div>
-      </section>
+        <div className="header-right">
+          <div className="score-box">
+            <p className="score-title">คะแนนรวม</p>
+            <p className="score-value">{employeeInfo.overallScore}/100</p>
+            <p className="score-label">ผลงานเยี่ยม</p>
+            {employeeInfo.overallScore >= 90
+                ? "ผลงานเยี่ยม"
+                : employeeInfo.overallScore >= 75
+                ? "ดีมาก"
+                : "ควรปรับปรุง"}
+          </div>
+        </div>
+      </div>
 
-      <section className="evaluation-details-section">
-        <h2 className="section-title">รายละเอียดการประเมินแต่ละด้าน</h2>
+      {/* รายละเอียดแต่ละด้าน */}
+      <div className="evaluation-section">
+        <h2>รายละเอียดการประเมินแต่ละด้าน</h2>
         <div className="evaluation-grid">
-          {evaluationData.scores.length > 0 ? (
-            evaluationData.scores.map((item, index) => (
-              <div key={index} className="evaluation-item">
-                <div className="evaluation-header">
-                  <h3>{item.criteria}</h3>
-                  <span className="score">{item.score}/5</span>
-                </div>
-                <div className="progress-bar">
-                  <div
-                    className="progress-fill"
-                    style={{ width: `${(item.score / 5) * 100}%` }}
-                  ></div>
-                </div>
+          {evaluationDetails.map((item, idx) => (
+            <div key={idx} className="evaluation-card">
+              <h3>{item.title}</h3>
+              <p className="desc">{item.desc}</p>
+              <div className="score">{item.score}/100</div>
+              <div className="progress-bar">
+                <div className="progress" style={{ width: `${item.score}%` }}></div>
               </div>
-            ))
-          ) : (
-            <p className="no-data">ไม่มีข้อมูล</p>
-          )}
+            </div>
+          ))}
         </div>
-      </section>
+      </div>
+
+      {/* ข้อเสนอแนะ */}
+      <div className="feedback-section">
+        <h2>ข้อเสนอแนะจากหัวหน้างาน</h2>
+        <p>{employeeInfo.feedback}</p>
+      </div>
     </div>
   );
 }

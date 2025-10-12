@@ -66,3 +66,29 @@
   background: #45a049;
 }
 
+.status-badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  text-align: center;
+}
+
+.status-pass {
+  background-color: #d1fae5; /* เขียวอ่อน */
+  color: #065f46;           /* เขียวเข้ม */
+  border: 1px solid #10b981;
+}
+
+.status-fail {
+  background-color: #fee2e2; /* แดงอ่อน */
+  color: #991b1b;           /* แดงเข้ม */
+  border: 1px solid #ef4444;
+}
+
+.status-pending {
+  background-color: #fef3c7; /* เหลืองอ่อน */
+  color: #92400e;           /* เหลืองเข้ม */
+  border: 1px solid #f59e0b;
+}

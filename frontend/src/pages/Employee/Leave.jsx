@@ -12,8 +12,25 @@ function Leave() {
   const [leaveHistory, setLeaveHistory] = useState([]);
 
   useEffect(() => {
-    // TODO: Fetch data
-  }, []);
+  const fetchLeaveData = async () => {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+
+    try {
+      const res = await fetch("http://localhost:3000/api/leave", {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
+
+      setLeaveData(data.balance || { vacation: 0, sick: 0, personal: 0 });
+      setLeaveHistory(data.history || []);
+    } catch (err) {
+      console.error("Error fetching leave data:", err);
+    }
+  };
+
+  fetchLeaveData();
+}, []);
 
   return (
     <div className="leave-page">
