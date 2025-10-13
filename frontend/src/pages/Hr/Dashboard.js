@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   FaUsers,
   FaChartLine,
@@ -21,6 +22,7 @@ ChartJS.register(ArcElement, BarElement, CategoryScale, LinearScale, Tooltip, Le
 
 function Dashboard() {
   const [dashboard, setDashboard] = useState(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -40,7 +42,6 @@ function Dashboard() {
 
   if (!dashboard) return <p className="text-center mt-5">⏳ กำลังโหลดข้อมูล...</p>;
 
-  // ✅ ดึงข้อมูลจาก response จริง
   const {
     totalEmployees,
     departments = [],
@@ -49,7 +50,6 @@ function Dashboard() {
     leaveThisMonth = [],
   } = dashboard;
 
-  // 🔹 กราฟจำนวนพนักงานแต่ละแผนก
   const deptData = {
     labels: departments.map((d) => d.department),
     datasets: [
@@ -61,7 +61,6 @@ function Dashboard() {
     ],
   };
 
-  // 🔹 กราฟการลาในเดือนนี้
   const leaveData = {
     labels: leaveThisMonth.map((l) => l.leave_type),
     datasets: [
@@ -80,15 +79,29 @@ function Dashboard() {
 
   return (
     <div className="container mt-4" style={{ fontFamily: "'Kanit', sans-serif" }}>
-      {/* ---------- หัวข้อ Dashboard ---------- */}
-      <div className="d-flex align-items-center mb-3">
-        <BiBarChartAlt2
-          size={18}
-          style={{ color: "#0b1e39", marginRight: "6px", marginTop: "-2px" }}
-        />
-        <h4 className="fw-bold mb-0" style={{ color: "#0b1e39" }}>
-          HR Dashboard
-        </h4>
+      {/* ---------- หัวข้อ Dashboard + ปุ่มแจ้งเตือน ---------- */}
+      <div className="d-flex justify-content-between align-items-center mb-3">
+        <div className="d-flex align-items-center">
+          <BiBarChartAlt2
+            size={18}
+            style={{ color: "#0b1e39", marginRight: "6px", marginTop: "-2px" }}
+          />
+          <h4 className="fw-bold mb-0" style={{ color: "#0b1e39" }}>
+            HR Dashboard
+          </h4>
+        </div>
+
+        <button
+          onClick={() => navigate("/dashboard/hr/contract-alert")}
+          className="btn btn-warning fw-bold shadow-sm"
+          style={{
+            borderRadius: "10px",
+            color: "#0b1e39",
+            fontSize: "0.9rem",
+          }}
+        >
+          🔔 แจ้งเตือนสัญญา
+        </button>
       </div>
 
       {/* ---------- การ์ด KPI ---------- */}
@@ -146,6 +159,7 @@ function Dashboard() {
         </div>
       </div>
 
+      {/* ---------- CSS ---------- */}
       <style>
         {`
           .dashboard-card {

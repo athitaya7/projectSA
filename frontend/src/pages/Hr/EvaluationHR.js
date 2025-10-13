@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { FaUserCheck, FaChartBar, FaSearch, FaArrowLeft, FaSave } from "react-icons/fa";
+import { useNavigate } from "react-router-dom";
 
 function EvaluationHR() {
   const [search, setSearch] = useState("");
@@ -11,20 +12,20 @@ function EvaluationHR() {
 
   // ✅ โหลดรายชื่อพนักงานทั้งหมดเมื่อเปิดหน้า
   useEffect(() => {
-  const fetchEmployees = async () => {
-    try {
-      const token = localStorage.getItem("token"); // ✅ ดึง token จาก localStorage
-      const res = await axios.get("http://localhost:3000/api/employees", {
-        headers: { Authorization: `Bearer ${token}` }, // ✅ แนบ token
-      });
-      setEmployees(res.data);
-    } catch (err) {
-      console.error("❌ Error fetching employees:", err);
-      alert("ไม่สามารถโหลดข้อมูลพนักงานได้ (อาจยังไม่ได้เข้าสู่ระบบ)");
-    }
-  };
-  fetchEmployees();
-}, []);
+    const fetchEmployees = async () => {
+      try {
+        const token = localStorage.getItem("token"); // ✅ ดึง token จาก localStorage
+        const res = await axios.get("http://localhost:3000/api/employees", {
+          headers: { Authorization: `Bearer ${token}` }, // ✅ แนบ token
+        });
+        setEmployees(res.data);
+      } catch (err) {
+        console.error("❌ Error fetching employees:", err);
+        alert("ไม่สามารถโหลดข้อมูลพนักงานได้ (อาจยังไม่ได้เข้าสู่ระบบ)");
+      }
+    };
+    fetchEmployees();
+  }, []);
 
   // ✅ โหลดข้อมูลการประเมินเมื่อเลือกพนักงาน
   useEffect(() => {
@@ -47,26 +48,48 @@ function EvaluationHR() {
     fetchEvaluations();
   }, [selectedEmp]);
 
+  const navigate = useNavigate();
+  const goToReport = async () => {
+    setLoading(true);
+    try {
+      const token = localStorage.getItem("token");
+
+      // 🔹 เรียก API ดึงข้อมูลรายงาน (แก้ URL ให้ตรงกับของคุณ)
+      const res = await axios.get("http://localhost:3000/api/ReportSummary", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      // ✅ เปลี่ยนหน้าไปยังหน้ารายงาน
+      navigate("/ReportSummary");
+    } catch (err) {
+      console.error("❌ Error fetching report summary:", err);
+      alert("ไม่สามารถโหลดข้อมูลรายงานได้ (อาจยังไม่ได้เข้าสู่ระบบ)");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+
   // ✅ เริ่มประเมิน
   const handleEvaluate = async (employee_code) => {
-  setLoading(true);
-  try {
-    const token = localStorage.getItem("token"); // 🔹 ดึง token จาก localStorage
-    const res = await axios.get(
-      `http://localhost:3000/api/evaluation/${employee_code}`,
-      {
-        headers: { Authorization: `Bearer ${token}` }, // 🔹 แนบ token
-      }
-    );
-    setSelectedEmp(employee_code);
-    setEvaluations(res.data);
-  } catch (err) {
-    console.error("❌ Error fetching evaluation:", err);
-    alert("ไม่สามารถโหลดข้อมูลการประเมินได้ (อาจยังไม่ได้เข้าสู่ระบบ)");
-  } finally {
-    setLoading(false);
-  }
-};
+    setLoading(true);
+    try {
+      const token = localStorage.getItem("token"); // 🔹 ดึง token จาก localStorage
+      const res = await axios.get(
+        `http://localhost:3000/api/evaluation/${employee_code}`,
+        {
+          headers: { Authorization: `Bearer ${token}` }, // 🔹 แนบ token
+        }
+      );
+      setSelectedEmp(employee_code);
+      setEvaluations(res.data);
+    } catch (err) {
+      console.error("❌ Error fetching evaluation:", err);
+      alert("ไม่สามารถโหลดข้อมูลการประเมินได้ (อาจยังไม่ได้เข้าสู่ระบบ)");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // ✅ กลับไปหน้ารายชื่อพนักงาน
   const handleBack = () => {
@@ -76,21 +99,21 @@ function EvaluationHR() {
 
   // ✅ บันทึกผล
   const handleSave = async () => {
-  try {
-    const token = localStorage.getItem("token");
-    await axios.put(
-      `http://localhost:3000/api/evaluation/${selectedEmp}`,
-      { evaluations },
-      {
-        headers: { Authorization: `Bearer ${token}` },
-      }
-    );
-    alert("✅ บันทึกผลการประเมินเรียบร้อยแล้ว!");
-  } catch (err) {
-    console.error("❌ Error saving evaluation:", err);
-    alert("เกิดข้อผิดพลาดในการบันทึก (อาจหมดอายุการเข้าสู่ระบบ)");
-  }
-};
+    try {
+      const token = localStorage.getItem("token");
+      await axios.put(
+        `http://localhost:3000/api/evaluation/${selectedEmp}`,
+        { evaluations },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      alert("✅ บันทึกผลการประเมินเรียบร้อยแล้ว!");
+    } catch (err) {
+      console.error("❌ Error saving evaluation:", err);
+      alert("เกิดข้อผิดพลาดในการบันทึก (อาจหมดอายุการเข้าสู่ระบบ)");
+    }
+  };
 
   // ✅ เปลี่ยนคะแนน
   const handleScoreChange = (index, newScore) => {
@@ -190,8 +213,9 @@ function EvaluationHR() {
           />
         </div>
 
-        <button className="btn btn-outline-primary">
+        <button className="btn btn-outline-primary" onClick={goToReport}>
           <FaChartBar className="me-2" /> รายงานผลรวม
+            
         </button>
       </div>
 

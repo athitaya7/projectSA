@@ -63,33 +63,12 @@ const Sidebar = ({ role, currentPage, setCurrentPage }) => {
             transition: "max-height 0.3s ease",
           }}
         >
-          {/* ✅ ข้อมูลส่วนตัว -> /dashboard/hr/history */}
+          {/* เหลือเฉพาะข้อมูลส่วนตัว และ เอกสาร */}
           <div
             onClick={() => handleNavigate("history", "/dashboard/hr/history")}
             className="submenu-item"
           >
             <FaUser className="menu-icon" /> ข้อมูลส่วนตัว
-          </div>
-
-          <div
-            onClick={() => handleNavigate("leave", "/dashboard/hr/leave")}
-            className="submenu-item"
-          >
-            <FaCalendarAlt className="menu-icon" /> สิทธิการลา
-          </div>
-
-          <div
-            onClick={() => handleNavigate("evaluation", "/dashboard/hr/evaluation")}
-            className="submenu-item"
-          >
-            <FaChartLine className="menu-icon" /> การประเมินผล
-          </div>
-
-          <div
-            onClick={() => handleNavigate("training", "/dashboard/hr/training")}
-            className="submenu-item"
-          >
-            <FaGraduationCap className="menu-icon" /> การฝึกอบรม
           </div>
 
           <div
@@ -120,7 +99,7 @@ const Sidebar = ({ role, currentPage, setCurrentPage }) => {
             transition: "max-height 0.3s ease",
           }}
         >
-          {/* ✅ ข้อมูลประจำตัวพนักงาน -> /dashboard/hr/personal-info */}
+          {/* ✅ รวมเมนูที่ย้ายมา */}
           <div
             onClick={() =>
               handleNavigate("personal-info", "/dashboard/hr/personal-info")
@@ -135,6 +114,27 @@ const Sidebar = ({ role, currentPage, setCurrentPage }) => {
             className="submenu-item"
           >
             <FaUsers className="menu-icon" /> ข้อมูลการทำงาน
+          </div>
+
+          <div
+            onClick={() => handleNavigate("leave", "/dashboard/hr/leave")}
+            className="submenu-item"
+          >
+            <FaCalendarAlt className="menu-icon" /> สิทธิการลา
+          </div>
+
+          <div
+            onClick={() => handleNavigate("training", "/dashboard/hr/training")}
+            className="submenu-item"
+          >
+            <FaGraduationCap className="menu-icon" /> การฝึกอบรม
+          </div>
+
+          <div
+            onClick={() => handleNavigate("evaluation", "/dashboard/hr/evaluation")}
+            className="submenu-item"
+          >
+            <FaChartLine className="menu-icon" /> การประเมินผล
           </div>
 
           <div

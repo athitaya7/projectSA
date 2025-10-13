@@ -64,7 +64,7 @@ function Profile() {
               <label>เบอร์โทรศัพท์</label>
               <p>{profileData.personalInfo.phone || '-'}</p>
             </div>
-            <div className="info-item full-width">
+            <div className="info-item">
               <label>ที่อยู่</label>
               <p>{profileData.personalInfo.address || '-'}</p>
             </div>

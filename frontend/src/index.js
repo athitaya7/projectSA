@@ -4,6 +4,7 @@ import { BrowserRouter } from "react-router-dom";
 import App from "./App";
 import "./index.css";
 import "bootstrap/dist/css/bootstrap.min.css";
+
  // สำคัญ! ให้ Bootstrap ทำงาน
 
 const root = ReactDOM.createRoot(document.getElementById("root"));

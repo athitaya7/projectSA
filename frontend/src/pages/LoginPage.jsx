@@ -21,7 +21,7 @@ function LoginPage() {
 
       console.log("Backend response:", res.data);
 
-      const { token, role } = res.data; // backend ต้องส่ง token + role
+      const { token, role, user } = res.data; // backend ต้องส่ง token + role
       console.log("JWT token received:", token);
 
       if (!token || !role) {
@@ -32,6 +32,7 @@ function LoginPage() {
       // เก็บ token + role ลง localStorage
       localStorage.setItem("token", token);
       localStorage.setItem("role", String(role)); // ต้องเป็น string
+      localStorage.setItem("user", JSON.stringify(user)); // ✅ เพิ่มบรรทัดนี้
 
       // ตรวจสอบ role กับ select ที่เลือก
       const roleMapping = { employee: "1", admin: "2" };
@@ -89,7 +90,7 @@ function LoginPage() {
             LOGIN
           </h1>
           <p className="text-secondary mb-0 small">
-            ระบบสารสนเทศบุคลากร | Silpakorn IT
+            ระบบสารสนเทศบุคลากร | TRINERGY
           </p>
         </div>
 
@@ -179,7 +180,7 @@ function LoginPage() {
         </form>
 
         <p className="text-center text-secondary mt-4 mb-0 small">
-          © 2025 Personnel Information System | Silpakorn IT
+          © 2025 Personnel Information System | TRINERGY INSTRUMENT CO., LTD.
         </p>
       </div>
     </div>

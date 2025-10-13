@@ -24,14 +24,6 @@ function Evaluation() {
         });
         const evalData = await evalRes.json();
 
-        // ✅ ดึงรายละเอียดแต่ละด้านจาก /api/evaluation/details
-        const detailRes = await fetch("http://localhost:3000/api/evaluation/details", {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-        const detailData = await detailRes.json();
-
         // ✅ รวมข้อมูลเข้า state
         setEmployeeInfo({
           name: `${evalData.employee.first_name} ${evalData.employee.last_name}`,
@@ -42,7 +34,15 @@ function Evaluation() {
           feedback: "ยังไม่มีข้อเสนอแนะจากหัวหน้างาน", // ถ้ามีใน DB ค่อยเพิ่ม
         });
 
-        setEvaluationDetails(detailData);
+        setEvaluationDetails([
+        { title: "คุณภาพงาน", desc: "วัดคุณภาพของผลงานและความละเอียดรอบคอบ", score: evalData.evaluation.quality_score },
+        { title: "ความรับผิดชอบ", desc: "ความรับผิดชอบต่อหน้าที่และความตรงต่อเวลา", score: evalData.evaluation.responsibility_score },
+        { title: "การทำงานเป็นทีม", desc: "ความร่วมมือและการสื่อสารกับเพื่อนร่วมงาน", score: evalData.evaluation.teamwork_score },
+        { title: "ความคิดสร้างสรรค์", desc: "การเสนอแนวคิดใหม่ๆ ในการทำงาน", score: evalData.evaluation.creativity_score },
+        { title: "ความตรงต่อเวลา", desc: "การมาทำงานและส่งงานตรงตามเวลา", score: evalData.evaluation.punctuality_score },
+        { title: "การสื่อสาร", desc: "การสื่อสารอย่างมีประสิทธิภาพกับทีมและลูกค้า", score: evalData.evaluation.communication_score },
+      ]);
+      
       } catch (error) {
         console.error("Error fetching evaluation data:", error);
       } finally {
@@ -92,8 +92,7 @@ function Evaluation() {
               <h3>{item.title}</h3>
               <p className="desc">{item.desc}</p>
               <div className="score">{item.score}/100</div>
-              <div className="progress-bar">
-                <div className="progress" style={{ width: `${item.score}%` }}></div>
+                <div className="progress-bar" style={{ "--progress": `${Math.min(item.score ?? 0, 100)}%` }}>
               </div>
             </div>
           ))}
