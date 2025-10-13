@@ -1132,5 +1132,34 @@ app.get("/api/finance/:employee_code", async (req, res) => {
   }
 });
 
+// ✅ แจ้งเตือนสัญญาใกล้หมดอายุ (ภายใน 30 วัน)
+app.get("/api/contracts/:employee_code", async (req, res) => {
+  const { employee_code } = req.params;
+  try {
+    const [rows] = await db.query(`
+      SELECT 
+        e.employee_code,
+        CONCAT(e.first_name, ' ', e.last_name) AS employeeName,
+        e.department,
+        e.position,
+        w.start_date,
+        w.end_date,
+        DATEDIFF(w.end_date, CURDATE()) AS daysLeft
+      FROM employees e
+      JOIN work_info w ON e.employee_code = w.employee_code
+      WHERE e.employee_code = ?
+      ORDER BY w.start_date DESC
+    `, [employee_code]);
+
+    if (rows.length === 0)
+      return res.status(404).json({ message: "ไม่พบสัญญาของพนักงานนี้" });
+
+    res.json(rows);
+  } catch (error) {
+    console.error("❌ Error fetching contract by employee:", error);
+    res.status(500).json({ message: "Error fetching contract data" });
+  }
+});
+
 
 app.listen(3000, ()=>console.log("Server running on http://localhost:3000"));
