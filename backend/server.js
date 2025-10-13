@@ -4,7 +4,10 @@ import cors from "cors";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
-
+import path from "path";
+import { fileURLToPath } from "url";
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 const app = express();
 app.use(cors());
 app.use(express.json());
@@ -57,6 +60,62 @@ app.post("/api/login", async (req, res) => {
   let roleName = user.role_id === 2 ? "hr" : "employee";
   const token = jwt.sign({ id: user.user_id, role: roleName }, SECRET, { expiresIn: "8h" });
   res.json({ token, role: user.role_id });
+});
+
+// ✅ Dashboard ของ Employee (ใช้ leave_records)
+app.get("/api/dashboard", async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader)
+      return res.status(401).json({ message: "Missing token" });
+
+    const token = authHeader.split(" ")[1];
+    const decoded = jwt.verify(token, SECRET); // ต้องใช้ secret เดียวกับตอน login
+    const employeeId = decoded.id;
+
+    // 🔹 ดึง employee_code จาก user_id
+    const [[employee]] = await db.query(
+      `SELECT employee_code FROM employees WHERE user_id = ?`,
+      [employeeId]
+    );
+
+    if (!employee)
+      return res.status(404).json({ message: "Employee not found" });
+
+    const empCode = employee.employee_code;
+
+    // ✅ ดึงจำนวนวันลาที่ "อนุมัติแล้ว" ทั้งหมด (คิดจาก start_date ถึง end_date)
+    const [[leaveUsed]] = await db.query(`
+      SELECT 
+        SUM(DATEDIFF(end_date, start_date) + 1) AS totalLeaveUsed
+      FROM leave_records
+      WHERE employee_code = ? AND status = 'อนุมัติ'
+    `, [empCode]);
+
+    // ✅ สมมติสิทธิ์วันลารวมต่อปี = 15 วัน
+    const totalLeave = 15;
+    const remainingLeave = totalLeave - (leaveUsed?.totalLeaveUsed || 0);
+
+    // ✅ ดึงจำนวน "การขาดงาน" (ถ้ามีตาราง attendance ใช้จริงได้เลย)
+    // ตอนนี้สมมติว่าการขาดงาน = จำนวนลาที่เกินสิทธิ์ (เชิงจำลอง)
+    const absences = remainingLeave < 0 ? Math.abs(remainingLeave) : 0;
+
+    // ✅ ดึงคะแนนประเมินเฉลี่ยจาก evaluation_details
+    const [[score]] = await db.query(`
+      SELECT AVG(score) AS yearlyScore 
+      FROM evaluation_details 
+      WHERE employee_code = ?
+    `, [empCode]);
+
+    res.json({
+      remainingLeave: remainingLeave > 0 ? remainingLeave : 0,
+      absences,
+      yearlyScore: Math.round(score?.yearlyScore || 0),
+    });
+  } catch (error) {
+    console.error("❌ Error fetching employee dashboard:", error);
+    res.status(500).json({ message: "Error fetching employee dashboard", error });
+  }
 });
 
 app.get("/api/profile", authMiddleware(["employee", "hr"]), async (req, res) => {
@@ -677,14 +736,11 @@ app.post("/api/hr/employees", authMiddleware(["hr"]), async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 });
-
-
-// ✅ แก้ไขข้อมูลพนักงาน
-// ✅ แก้ไขข้อมูลพนักงาน (HR Only)
+//แก้ไขพนักงาน
 app.put("/api/hr/employees/:employee_code", authMiddleware(["hr"]), async (req, res) => {
   try {
     const { employee_code } = req.params;
-    const {
+    let {
       first_name,
       last_name,
       gender,
@@ -699,10 +755,36 @@ app.put("/api/hr/employees/:employee_code", authMiddleware(["hr"]), async (req, 
       salary,
     } = req.body;
 
+    // ✅ Helper: แปลงวันที่ ISO → YYYY-MM-DD
+    const formatDate = (date) => {
+      if (!date) return null;
+      try {
+        return new Date(date).toISOString().split("T")[0]; // ได้ "2021-06-01"
+      } catch {
+        return null;
+      }
+    };
+
+    // ✅ ถ้ามีค่า undefined ให้เปลี่ยนเป็น null (ป้องกัน error)
+    const clean = (v) => (v === undefined || v === "" ? null : v);
+
+    first_name = clean(first_name);
+    last_name = clean(last_name);
+    gender = clean(gender);
+    birth_date = formatDate(clean(birth_date)); // ✅ แปลงก่อนส่ง SQL
+    national_id = clean(national_id);
+    email = clean(email);
+    phone = clean(phone);
+    address = clean(address);
+    position = clean(position);
+    department = clean(department);
+    hire_date = formatDate(clean(hire_date)); // ✅ แปลงก่อนส่ง SQL
+    salary = clean(salary);
+
     const conn = await mysql.createConnection(dbConfig);
     await conn.beginTransaction();
 
-    // ✅ ตรวจว่ามีพนักงานนี้อยู่จริงก่อน
+    // ✅ ตรวจว่ามีพนักงานนี้อยู่จริง
     const [exist] = await conn.execute(
       "SELECT employee_code FROM employees WHERE employee_code = ?",
       [employee_code]
@@ -714,7 +796,7 @@ app.put("/api/hr/employees/:employee_code", authMiddleware(["hr"]), async (req, 
     }
 
     // ✅ อัปเดตตาราง employees
-    const [result] = await conn.execute(
+    await conn.execute(
       `
       UPDATE employees
       SET 
@@ -747,7 +829,7 @@ app.put("/api/hr/employees/:employee_code", authMiddleware(["hr"]), async (req, 
       ]
     );
 
-    // ✅ อัปเดต payroll (ถ้ามี salary ส่งมา)
+    // ✅ อัปเดต payroll (ถ้ามี salary)
     if (salary !== undefined && salary !== null) {
       await conn.execute(
         `
@@ -768,6 +850,7 @@ app.put("/api/hr/employees/:employee_code", authMiddleware(["hr"]), async (req, 
     res.status(500).json({ message: "Server error", error: err.message });
   }
 });
+
 
 
 // ✅ ลบพนักงาน
@@ -1161,5 +1244,40 @@ app.get("/api/contracts/:employee_code", async (req, res) => {
   }
 });
 
+// ✅ แจ้งเตือนสัญญาใกล้หมดอายุ (ภายใน 30 วัน)
+app.get("/api/contracts", async (req, res) => {
+  try {
+    const [rows] = await db.query(`
+      SELECT 
+        e.employee_code,
+        CONCAT(e.first_name, ' ', e.last_name) AS employeeName,
+        e.department,
+        e.position,
+        w.start_date,
+        w.end_date,
+        DATEDIFF(w.end_date, CURDATE()) AS daysLeft
+      FROM employees e
+      JOIN work_info w ON e.employee_code = w.employee_code
+      WHERE w.end_date IS NOT NULL 
+        AND DATEDIFF(w.end_date, CURDATE()) BETWEEN 0 AND 30
+      ORDER BY w.end_date ASC
+    `);
+
+    res.json(rows);
+  } catch (error) {
+    console.error("❌ Error fetching contracts:", error);
+    res.status(500).json({ message: "Error fetching contracts", error });
+  }
+});
+app.use(cors());
+app.use(express.json());
+
+// ✅ เสิร์ฟไฟล์ static จากโฟลเดอร์ public
+app.use(express.static(path.join(__dirname, "public")));
+
+// ✅ route สำหรับดูรายงาน
+app.get("/api/ReportSummary", (req, res) => {
+  res.sendFile(path.join(__dirname, "public/reports/hr_report.html"));
+});
 
 app.listen(3000, ()=>console.log("Server running on http://localhost:3000"));
